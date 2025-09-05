@@ -523,7 +523,9 @@ const lightThemeStyles = {
               <div className={themeStyles.welcomeCard}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className={`${isDark ? 'text-white' : 'text-gray-800'} font-bold text-lg mb-1`}>Welcome back, John! 👋</h3>
+                    <h3 className={`${isDark ? 'text-white' : 'text-gray-800'} font-bold text-lg mb-1`}>
+                      Welcome back{profile && profile.displayName ? `, ${profile.displayName.split(' ')[0]}` : ''}! 👋
+                    </h3>
                     <p className={`${isDark ? 'text-gray-400' : 'text-slate-600'} text-sm`}>Ready to find your next service provider?</p>
                   </div>
                   <div className="text-right">
