@@ -23,6 +23,24 @@ import { useTheme } from '../theme/useTheme';
 import { useAuth } from '../contexts/AuthContextHooks';
 
 const Dashboard: React.FC = () => {
+  // User profile state
+  const [profile, setProfile] = useState<any | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const { user } = useAuth();
+  React.useEffect(() => {
+    if (!user) return;
+    setProfileLoading(true);
+    import('../firebase/config').then(({ db }) => {
+      import('firebase/firestore').then(({ doc, getDoc }) => {
+        const ref = doc(db, 'users', user.uid);
+        getDoc(ref).then((snap) => {
+          if (snap.exists()) setProfile(snap.data());
+          else setProfile(null);
+          setProfileLoading(false);
+        }).catch(() => setProfileLoading(false));
+      });
+    });
+  }, [user]);
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { signOut } = useAuth();
@@ -412,22 +430,33 @@ const lightThemeStyles = {
               
               <div className="relative px-4 pt-3 pb-3">
                 <div className="flex items-center justify-between">
-                  {/* Left cluster */}
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="relative">
-                      <div className={`w-11 h-11 rounded-xl ${isDark ? 'bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600' : 'bg-gradient-to-br from-slate-600 via-gray-600 to-zinc-600'} flex items-center justify-center shadow-lg ring-1 ${isDark ? 'ring-white/20' : 'ring-slate-400/30'}`}>
-                        <Search className="w-5 h-5 text-white" />
-                      </div>
-                    </div>
-                    <div className="flex flex-col">
-                      <h1 className={themeStyles.header.greeting}>{greeting}, John</h1>
-                      <div className={themeStyles.header.metadata}>
-                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> New York, NY</span>
-                        <span className={`w-1 h-1 rounded-full ${isDark ? 'bg-blue-300/50' : 'bg-slate-400/60'}`} />
-                        <span>{now.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}</span>
-                        <span className={`w-1 h-1 rounded-full ${isDark ? 'bg-blue-300/50' : 'bg-slate-400/60'}`} />
-                        <span>{now.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}</span>
-                      </div>
+                  {/* Left cluster: User Info from Firebase */}
+                  <div className="flex items-center gap-4 flex-1 min-w-0 pr-4">
+                    {/* Avatar or fallback */}
+                    {profile && profile.photoURL ? (
+                      <img
+                        src={profile.photoURL}
+                        alt="Profile"
+                        className="w-11 h-11 rounded-full border-2 border-blue-400 object-cover shadow-md"
+                      />
+                    ) : null}
+                    <div className="flex flex-col flex-1 min-w-0">
+                      {/* Name and greeting */}
+                      {profile && profile.displayName ? (
+                        <h1 className={themeStyles.header.greeting}>
+                          {greeting}, {profile.displayName.split(' ')[0]}
+                        </h1>
+                      ) : null}
+                      {/* Email or phone */}
+                      {profile && (profile.email || profile.phoneNumber) ? (
+                        <div className={themeStyles.header.metadata}>
+                          <span>{profile.email || profile.phoneNumber}</span>
+                          <span className={`w-1 h-1 rounded-full ${isDark ? 'bg-blue-300/50' : 'bg-slate-400/60'}`} />
+                          <span>{now.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}</span>
+                          <span className={`w-1 h-1 rounded-full ${isDark ? 'bg-blue-300/50' : 'bg-slate-400/60'}`} />
+                          <span>{now.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}</span>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                   
