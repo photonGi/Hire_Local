@@ -2,10 +2,12 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, Shield, Bell, MapPin, User, Lock, LogOut, Edit3, Mail, Phone, CheckCircle2, ChevronDown, ChevronUp, Link2, Loader2, AlertTriangle, X, CheckCircle } from 'lucide-react';
 import { useTheme } from '../theme/useTheme';
+import { useAuth } from '../contexts/AuthContextHooks';
 
 const UserProfileScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { theme } = useTheme();
+  const { theme, setTheme } = useTheme();
+  const { user, userProfile, updateProfile, signOut } = useAuth();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -20,24 +22,54 @@ const UserProfileScreen: React.FC = () => {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [toasts, setToasts] = useState<Array<{ id: string; title: string; type?: 'success' | 'error' | 'info'; desc?: string }>>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ personal: true, location: false, notifications: true, privacy: false, accounts: true });
+  
+  // Initialize profile from Firebase user data
   const [profile, setProfile] = useState({
-    name: 'John Carter',
-    email: 'john.carter@example.com',
-    phone: '+1 (555) 234-9876',
-    accountType: 'Pro',
-    avatar: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=240&h=240&fit=crop&crop=face',
-    address: '123 Market Street, New York, NY',
-    radiusKm: 25
+    name: userProfile?.displayName || user?.displayName || '',
+    email: userProfile?.email || user?.email || '',
+    phone: userProfile?.phone || '',
+    accountType: userProfile?.accountType || 'Free',
+    avatar: userProfile?.photoURL || user?.photoURL || 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=240&h=240&fit=crop&crop=face',
+    address: userProfile?.address || '',
+    radiusKm: userProfile?.radiusKm || 25
   });
-  const initialNotif = { emailUpdates: true, providerReplies: true, recommendations: true, marketing: false, security: true };
-  const initialPrivacy = { showProfilePublic: false, shareActivity: false, aiPersonalization: true, dataCollection: true };
-  const initialAccounts = { google: true, facebook: false };
+  
+  const initialNotif = userProfile?.notifications || { emailUpdates: true, providerReplies: true, recommendations: true, marketing: false, security: true };
+  const initialPrivacy = userProfile?.privacy || { showProfilePublic: false, shareActivity: false, aiPersonalization: true, dataCollection: true };
+  const initialAccounts = userProfile?.connectedAccounts || { google: false, facebook: false };
+  
   const [notifSettings, setNotifSettings] = useState(initialNotif);
   const [privacySettings, setPrivacySettings] = useState(initialPrivacy);
   const [connectedAccounts, setConnectedAccounts] = useState(initialAccounts);
 
   // Dirty tracking state snapshots
   const [baseline, setBaseline] = useState({ profile, notifSettings, privacySettings, connectedAccounts, selectedLocaleType });
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+    }
+  }, [user, navigate]);
+
+  // Sync profile data when userProfile changes
+  useEffect(() => {
+    if (userProfile) {
+      setProfile({
+        name: userProfile.displayName || user?.displayName || '',
+        email: userProfile.email || user?.email || '',
+        phone: userProfile.phone || '',
+        accountType: userProfile.accountType || 'Free',
+        avatar: userProfile.photoURL || user?.photoURL || 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=240&h=240&fit=crop&crop=face',
+        address: userProfile.address || '',
+        radiusKm: userProfile.radiusKm || 25
+      });
+      
+      setNotifSettings(userProfile.notifications || { emailUpdates: true, providerReplies: true, recommendations: true, marketing: false, security: true });
+      setPrivacySettings(userProfile.privacy || { showProfilePublic: false, shareActivity: false, aiPersonalization: true, dataCollection: true });
+      setConnectedAccounts(userProfile.connectedAccounts || { google: false, facebook: false });
+    }
+  }, [userProfile, user]);
   const ThemeToggle = () => (
     <button
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -215,15 +247,38 @@ const UserProfileScreen: React.FC = () => {
   const simulateNetwork = (ms = 900) => new Promise(res => setTimeout(res, ms));
 
   const handleSave = async () => {
-    if (!isDirty) return;
+    if (!isDirty || !user) return;
     setSaving(true);
     pushToast('Saving changes...', 'info');
-    await simulateNetwork();
-    setBaseline({ profile, notifSettings, privacySettings, connectedAccounts, selectedLocaleType });
-    setSaving(false);
-    setEditing(false);
-    setLastSaved(new Date());
-    pushToast('Profile Updated', 'success', 'Your changes are stored locally (mock)');
+    
+    try {
+      // Prepare the profile data to save
+      const profileData = {
+        displayName: profile.name,
+        phone: profile.phone,
+        address: profile.address,
+        radiusKm: profile.radiusKm,
+        accountType: profile.accountType,
+        notifications: notifSettings,
+        privacy: privacySettings,
+        connectedAccounts: connectedAccounts,
+        localeType: selectedLocaleType,
+        updatedAt: new Date()
+      };
+      
+      // Update the profile in Firebase
+      await updateProfile(profileData);
+      
+      setBaseline({ profile, notifSettings, privacySettings, connectedAccounts, selectedLocaleType });
+      setSaving(false);
+      setEditing(false);
+      setLastSaved(new Date());
+      pushToast('Profile Updated', 'success', 'Your changes have been saved to Firebase');
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      setSaving(false);
+      pushToast('Save Failed', 'error', 'Failed to save changes. Please try again.');
+    }
   };
   
   const handleCancel = () => {
@@ -252,23 +307,45 @@ const UserProfileScreen: React.FC = () => {
   const handleLogout = async () => {
     setShowLogoutConfirm(false);
     pushToast('Logging out...', 'info');
-    await simulateNetwork(700);
-    pushToast('Logged Out (mock)', 'success');
-    navigate('/');
+    
+    try {
+      await signOut();
+      pushToast('Logged Out', 'success');
+      navigate('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      pushToast('Logout Failed', 'error', 'Failed to sign out. Please try again.');
+    }
   };
 
   const triggerAvatarUpload = () => guardEdit(() => fileInputRef.current?.click());
   
-  const onAvatarSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onAvatarSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setAvatarUploading(true);
-      const url = URL.createObjectURL(file);
-      setTimeout(() => {
-        setProfile(p => ({ ...p, avatar: url }));
+      try {
+        // Convert file to base64 for storage
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const base64String = event.target?.result as string;
+          
+          // Update local state immediately for better UX
+          setProfile(p => ({ ...p, avatar: base64String }));
+          
+          // Save to Firebase
+          if (user) {
+            await updateProfile({ photoURL: base64String });
+            pushToast('Avatar Updated', 'success', 'Profile picture saved to Firebase');
+          }
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('Error updating avatar:', error);
+        pushToast('Avatar Update Failed', 'error', 'Failed to save profile picture');
+      } finally {
         setAvatarUploading(false);
-        pushToast('Avatar Updated', 'success');
-      }, 900);
+      }
     }
   };
 
@@ -659,10 +736,17 @@ const UserProfileScreen: React.FC = () => {
                 {['current','next','confirm'].map(f => (
                   <div key={f} className="space-y-1">
                     <label className={`text-[11px] tracking-wide uppercase font-medium ${theme === 'dark' ? 'text-blue-200/50' : 'text-slate-500'}`}>{f==='current'?'Current Password': f==='next' ? 'New Password' : 'Confirm Password'}</label>
-                    <input type="password" value={pwdForm[f as keyof typeof pwdForm]} onChange={e=>setPwdForm(p=>({...p,[f]:e.target.value}))} disabled={pwdSubmitting} className={`w-full rounded-xl px-4 py-3 text-sm transition ${theme === 'dark' 
-                      ? 'glass-input text-white' 
-                      : 'glass-input-light text-slate-800'
-                    }`} />
+                    <input 
+                      type="password" 
+                      value={pwdForm[f as keyof typeof pwdForm]} 
+                      onChange={e=>setPwdForm(p=>({...p,[f]:e.target.value}))} 
+                      disabled={pwdSubmitting} 
+                      className={`w-full rounded-xl px-4 py-3 text-sm transition ${
+                        theme === 'dark' 
+                          ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400 focus:border-blue-400 focus:bg-white/10' 
+                          : 'bg-gray-50/80 border border-gray-200 text-gray-900 placeholder-gray-500 focus:border-blue-400 focus:bg-white/10'
+                      }`} 
+                    />
                   </div>
                 ))}
                 {pwdError && <p className="text-xs text-red-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> {pwdError}</p>}

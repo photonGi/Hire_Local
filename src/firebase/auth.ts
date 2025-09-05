@@ -3,7 +3,11 @@ import {
   signInWithPopup, 
   onAuthStateChanged,
   signOut,
-  User 
+  User,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile as firebaseUpdateProfile,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { 
   doc, 
@@ -65,6 +69,45 @@ export const firebaseAuth = {
     }
   },
 
+  async signInWithEmail(email: string, password: string) {
+    try {
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      await this.createUserProfile(result.user);
+      return result.user;
+    } catch (error) {
+      console.error('Error signing in with email:', error);
+      throw error;
+    }
+  },
+
+  async signUpWithEmail(email: string, password: string, displayName?: string) {
+    try {
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Update the user's display name if provided
+      if (displayName) {
+        await firebaseUpdateProfile(result.user, {
+          displayName: displayName
+        });
+      }
+      
+      await this.createUserProfile(result.user);
+      return result.user;
+    } catch (error) {
+      console.error('Error signing up with email:', error);
+      throw error;
+    }
+  },
+
+  async resetPassword(email: string) {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
+      throw error;
+    }
+  },
+
   async signOut() {
     try {
       await signOut(auth);
@@ -85,6 +128,28 @@ export const userService = {
         email: user.email,
         displayName: user.displayName,
         photoURL: user.photoURL,
+        phone: '',
+        address: '',
+        radiusKm: 25,
+        accountType: 'Free',
+        localeType: 'Urban',
+        notifications: {
+          emailUpdates: true,
+          providerReplies: true,
+          recommendations: true,
+          marketing: false,
+          security: true
+        },
+        privacy: {
+          showProfilePublic: false,
+          shareActivity: false,
+          aiPersonalization: true,
+          dataCollection: true
+        },
+        connectedAccounts: {
+          google: user.providerData.some(provider => provider.providerId === 'google.com'),
+          facebook: user.providerData.some(provider => provider.providerId === 'facebook.com')
+        },
         lastLogin: serverTimestamp(),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
@@ -117,6 +182,28 @@ export const userService = {
         email: data.email,
         displayName: data.displayName,
         photoURL: data.photoURL,
+        phone: data.phone || '',
+        address: data.address || '',
+        radiusKm: data.radiusKm || 25,
+        accountType: data.accountType || 'Free',
+        localeType: data.localeType || 'Urban',
+        notifications: data.notifications || {
+          emailUpdates: true,
+          providerReplies: true,
+          recommendations: true,
+          marketing: false,
+          security: true
+        },
+        privacy: data.privacy || {
+          showProfilePublic: false,
+          shareActivity: false,
+          aiPersonalization: true,
+          dataCollection: true
+        },
+        connectedAccounts: data.connectedAccounts || {
+          google: false,
+          facebook: false
+        },
         lastLogin: data.lastLogin?.toDate?.() || new Date(),
         createdAt: data.createdAt?.toDate?.() || new Date(),
         updatedAt: data.updatedAt?.toDate?.() || new Date()

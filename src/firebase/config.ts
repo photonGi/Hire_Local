@@ -33,15 +33,7 @@ export const firebaseConfig = {
   measurementId: getEnvVar('VITE_FIREBASE_MEASUREMENT_ID')
 };
 
-// Debug logging for production issues
-console.log('[FIREBASE DEBUG] Environment variables check:');
-console.log('API Key exists:', !!firebaseConfig.apiKey);
-console.log('API Key length:', firebaseConfig.apiKey?.length || 0);
-console.log('API Key preview:', firebaseConfig.apiKey ? `${firebaseConfig.apiKey.substring(0, 10)}...` : 'undefined');
-console.log('Project ID:', firebaseConfig.projectId);
-console.log('Auth Domain:', firebaseConfig.authDomain);
-console.log('import.meta.env keys:', Object.keys(import.meta.env || {}).filter(key => key.startsWith('VITE_FIREBASE')));
-console.log('process.env available:', typeof process !== 'undefined' && !!process.env);
+// Debug logging disabled for production
 
 // Validate required fields
 const requiredFields = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
@@ -59,7 +51,6 @@ let analytics;
 let db;
 
 try {
-  console.log('[FIREBASE] Initializing Firebase with config:', JSON.stringify(firebaseConfig, null, 2));
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   
@@ -67,7 +58,6 @@ try {
   if (firebaseConfig.measurementId && typeof window !== 'undefined') {
     try {
       analytics = getAnalytics(app);
-      console.log('[FIREBASE] Analytics initialized');
     } catch (analyticsError) {
       console.warn('[FIREBASE] Analytics initialization failed:', analyticsError);
     }
@@ -78,11 +68,8 @@ try {
     cacheSizeBytes: 50 * 1024 * 1024, // 50 MB cache size
     experimentalAutoDetectLongPolling: true, // Automatically detect if long polling is needed
   });
-
-  console.log('[FIREBASE] Successfully connected to Firebase');
 } catch (error) {
   console.error('[FIREBASE ERROR] Failed to initialize Firebase:', error);
-  console.error('[FIREBASE ERROR] Config used:', firebaseConfig);
   throw error;
 }
 
@@ -91,23 +78,9 @@ export { auth, analytics, db };
 // Enable auth persistence
 if (auth) {
   setPersistence(auth, browserLocalPersistence)
-    .then(() => {
-      console.log('[FIREBASE] Auth persistence enabled');
-    })
     .catch((error) => {
       console.error('[FIREBASE] Auth persistence error:', error);
     });
-
-  // Monitor auth state
-  onAuthStateChanged(auth, (user) => {
-    console.log('[FIREBASE] Auth state changed:', user ? 'Logged in' : 'Logged out');
-    if (user) {
-      // Force token refresh on auth state change
-      user.getIdToken(true)
-        .then(() => console.log('[FIREBASE] Token refreshed'))
-        .catch(error => console.error('[FIREBASE] Token refresh failed:', error));
-    }
-  });
 }
 
 export default app;

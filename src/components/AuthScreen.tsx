@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Search } from 'lucide-react';
 import Navbar from './shared/Navbar';
-import { AuthService } from '../services/AuthService';
+import { useAuth } from '../contexts/AuthContextHooks';
+import { useTheme } from '../theme/useTheme';
 
 const AuthScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { signInWithEmail, signUpWithEmail, resetPassword, signInWithGoogle, user, loading: authLoading } = useAuth();
+  const { theme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -17,23 +20,20 @@ const AuthScreen: React.FC = () => {
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  const authService = AuthService.getInstance();
 
   useEffect(() => {
     // Check if user is already logged in
-    const currentUser = authService.getCurrentUser();
-    if (currentUser) {
+    if (user) {
       navigate('/dashboard');
     }
-  }, [navigate, authService]);
+  }, [user, navigate]);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError(null);
     try {
-      await authService.signInWithGoogle();
-      navigate('/dashboard');
+      await signInWithGoogle();
+      // Navigation will be handled by the useEffect that watches for user changes
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to sign in with Google');
     } finally {
@@ -44,30 +44,67 @@ const AuthScreen: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setLoading(true);
     
-    // Validate form
-    if (isSignUp) {
-      if (!name) {
-        setError('Name is required');
-        return;
+    try {
+      // Validate form
+      if (isSignUp) {
+        if (!name) {
+          setError('Name is required');
+          return;
+        }
+        if (password !== confirmPassword) {
+          setError('Passwords do not match');
+          return;
+        }
+        if (!agreeTerms) {
+          setError('Please agree to the terms and conditions');
+          return;
+        }
       }
-      if (password !== confirmPassword) {
-        setError('Passwords do not match');
-        return;
-      }
-      if (!agreeTerms) {
-        setError('Please agree to the terms and conditions');
-        return;
-      }
-    }
 
-    if (!email || !password) {
-      setError('Email and password are required');
-      return;
+      if (!email || !password) {
+        setError('Email and password are required');
+        return;
+      }
+
+      // Validate password strength for sign up
+      if (isSignUp && password.length < 6) {
+        setError('Password must be at least 6 characters long');
+        return;
+      }
+      
+      // Perform authentication
+      if (isSignUp) {
+        await signUpWithEmail(email, password, name);
+      } else {
+        await signInWithEmail(email, password);
+      }
+      
+      // Navigation will happen automatically due to useEffect watching user state
+    } catch (error) {
+      console.error('Authentication error:', error);
+      if (error instanceof Error) {
+        // Handle specific Firebase auth errors
+        if (error.message.includes('auth/user-not-found')) {
+          setError('No account found with this email address');
+        } else if (error.message.includes('auth/wrong-password')) {
+          setError('Incorrect password');
+        } else if (error.message.includes('auth/email-already-in-use')) {
+          setError('An account with this email already exists');
+        } else if (error.message.includes('auth/weak-password')) {
+          setError('Password is too weak. Please choose a stronger password');
+        } else if (error.message.includes('auth/invalid-email')) {
+          setError('Please enter a valid email address');
+        } else {
+          setError(error.message);
+        }
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
-    
-    // For future email/password auth implementation
-    navigate('/dashboard');
   };
 
   return (
@@ -140,13 +177,21 @@ const AuthScreen: React.FC = () => {
                   placeholder={isSignUp ? 'New Password' : 'Password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-4 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:bg-white/10 transition-all duration-300"
+                  className={`w-full pl-12 pr-12 py-4 rounded-xl focus:outline-none transition-all duration-300 ${
+                    theme === 'dark' 
+                      ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400 focus:border-blue-400 focus:bg-white/10' 
+                      : 'bg-gray-50/80 border border-gray-200 text-gray-900 placeholder-gray-500 focus:border-blue-400 focus:bg-white/10'
+                  }`}
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                  className={`absolute right-4 top-1/2 transform -translate-y-1/2 transition-colors ${
+                    theme === 'dark' 
+                      ? 'text-gray-400 hover:text-white' 
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -186,9 +231,24 @@ const AuthScreen: React.FC = () => {
                   {isSignUp ? "I Agree With The Terms And Conditions" : "Remember Me"}
                 </label>
                 {!isSignUp && (
-                  <a href="#" className="ml-auto text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 text-sm transition-colors">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!email) {
+                        setError('Please enter your email address first');
+                        return;
+                      }
+                      try {
+                        await resetPassword(email);
+                        setError('Password reset email sent! Check your inbox.');
+                      } catch (error) {
+                        setError('Failed to send password reset email. Please try again.');
+                      }
+                    }}
+                    className="ml-auto text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 text-sm transition-colors"
+                  >
                     Forgot Password?
-                  </a>
+                  </button>
                 )}
               </div>
 
@@ -202,10 +262,10 @@ const AuthScreen: React.FC = () => {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || authLoading}
                 className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-600/30 transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Please wait...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+                {loading || authLoading ? 'Please wait...' : (isSignUp ? 'Sign Up' : 'Sign In')}
               </button>
 
               {/* Error Message */}

@@ -7,6 +7,28 @@ interface UserProfile {
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
+  phone?: string;
+  address?: string;
+  radiusKm?: number;
+  accountType?: string;
+  localeType?: string;
+  notifications?: {
+    emailUpdates: boolean;
+    providerReplies: boolean;
+    recommendations: boolean;
+    marketing: boolean;
+    security: boolean;
+  };
+  privacy?: {
+    showProfilePublic: boolean;
+    shareActivity: boolean;
+    aiPersonalization: boolean;
+    dataCollection: boolean;
+  };
+  connectedAccounts?: {
+    google: boolean;
+    facebook: boolean;
+  };
   createdAt: Date;
   updatedAt: Date;
   [key: string]: string | null | Date | unknown;
@@ -17,6 +39,9 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, displayName?: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
 }
@@ -31,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsubscribe = firebaseAuth.onAuthStateChanged(async (user) => {
       try {
-        console.log("[AUTH] Auth state changed:", user ? "Logged in" : "Logged out");
+        // Auth state changed
         setUser(user);
         
         if (user) {
@@ -52,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               throw new Error("Failed to get valid auth token after retries");
             }
             
-            console.log("[AUTH] Got user token:", token ? "Valid" : "Missing");
+            // Token obtained
             
             // Attempt to get or create user profile with retries
             let profile = null;
@@ -61,7 +86,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               try {
                 profile = await userService.getUserProfile(user.uid);
                 if (!profile) {
-                  console.log("[AUTH] Creating new user profile");
                   await userService.createUserProfile(user);
                   profile = await userService.getUserProfile(user.uid);
                 }
@@ -75,7 +99,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             if (profile) {
               setUserProfile(profile);
-              console.log("[AUTH] Profile set successfully");
             } else {
               // Fall back to basic profile if Firestore operations fail
               const basicProfile: UserProfile = {
@@ -87,7 +110,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 updatedAt: new Date()
               };
               setUserProfile(basicProfile);
-              console.log("[AUTH] Using basic profile fallback");
             }
           } catch (error) {
             console.error('[AUTH] Error fetching/creating user profile:', error);
@@ -101,7 +123,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               updatedAt: new Date()
             };
             setUserProfile(basicProfile);
-            console.log("[AUTH] Set basic profile as fallback");
           }
         } else {
           // Clear both user and profile when logged out
@@ -145,6 +166,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithEmail = async (email: string, password: string) => {
+    try {
+      const result = await firebaseAuth.signInWithEmail(email, password);
+      if (!result) throw new Error('No user returned from email sign in');
+      const profile = await userService.getUserProfile(result.uid);
+      if (profile) {
+        setUserProfile(profile as UserProfile);
+      } else {
+        const basicProfile: UserProfile = {
+          id: result.uid,
+          email: result.email,
+          displayName: result.displayName,
+          photoURL: result.photoURL,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        setUserProfile(basicProfile);
+      }
+    } catch (error) {
+      console.error('Error signing in with email:', error);
+      throw error;
+    }
+  };
+
+  const signUpWithEmail = async (email: string, password: string, displayName?: string) => {
+    try {
+      const result = await firebaseAuth.signUpWithEmail(email, password, displayName);
+      if (!result) throw new Error('No user returned from email sign up');
+      const profile = await userService.getUserProfile(result.uid);
+      if (profile) {
+        setUserProfile(profile as UserProfile);
+      } else {
+        const basicProfile: UserProfile = {
+          id: result.uid,
+          email: result.email,
+          displayName: result.displayName,
+          photoURL: result.photoURL,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        setUserProfile(basicProfile);
+      }
+    } catch (error) {
+      console.error('Error signing up with email:', error);
+      throw error;
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      await firebaseAuth.resetPassword(email);
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     try {
       await firebaseAuth.signOut();
@@ -174,6 +252,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         userProfile,
         loading,
         signInWithGoogle,
+        signInWithEmail,
+        signUpWithEmail,
+        resetPassword,
         signOut,
         updateProfile
       }}

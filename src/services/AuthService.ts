@@ -3,7 +3,10 @@ import {
   signInWithPopup,
   signOut,
   onAuthStateChanged,
-  User
+  User,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth, firebaseConfig } from '../firebase/config';
 
@@ -66,6 +69,69 @@ export class AuthService {
         }
       }
       throw new Error(error instanceof Error ? error.message : 'Failed to sign in with Google');
+    }
+  }
+
+  async signInWithEmail(email: string, password: string) {
+    try {
+      console.log('Starting email sign-in...');
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      console.log('Email sign-in completed');
+      
+      const user = result.user as AuthUser;
+      user.provider = 'email';
+      console.log('User authenticated:', user.email);
+      
+      return user;
+    } catch (error) {
+      console.error('Email sign-in error:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+        if ('code' in error) {
+          console.error('Firebase error code:', (error as any).code);
+        }
+      }
+      throw new Error(error instanceof Error ? error.message : 'Failed to sign in with email');
+    }
+  }
+
+  async signUpWithEmail(email: string, password: string, displayName?: string) {
+    try {
+      console.log('Starting email sign-up...');
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      console.log('Email sign-up completed');
+      
+      const user = result.user as AuthUser;
+      user.provider = 'email';
+      console.log('User created:', user.email);
+      
+      return user;
+    } catch (error) {
+      console.error('Email sign-up error:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+        if ('code' in error) {
+          console.error('Firebase error code:', (error as any).code);
+        }
+      }
+      throw new Error(error instanceof Error ? error.message : 'Failed to sign up with email');
+    }
+  }
+
+  async resetPassword(email: string) {
+    try {
+      console.log('Sending password reset email...');
+      await sendPasswordResetEmail(auth, email);
+      console.log('Password reset email sent');
+    } catch (error) {
+      console.error('Password reset error:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+        if ('code' in error) {
+          console.error('Firebase error code:', (error as any).code);
+        }
+      }
+      throw new Error(error instanceof Error ? error.message : 'Failed to send password reset email');
     }
   }
 

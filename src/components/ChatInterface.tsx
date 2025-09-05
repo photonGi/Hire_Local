@@ -1056,9 +1056,9 @@ const lightThemeClasses = {
                         : themeClasses.avatarAI
                     }`}>
                       {message.type === 'user' ? 
-                        <User className={`w-4 h-4 ${theme === 'dark' ? 'text-white' : 'text-white'} drop-shadow-sm`} /> : 
+                        <User className={`w-4 h-4 text-white drop-shadow-sm`} /> : 
                         <div className="relative">
-                          <svg className={`w-5 h-5 ${theme === 'dark' ? 'text-white' : 'text-white'} drop-shadow-sm`} viewBox="0 0 24 24" fill="currentColor">
+                          <svg className={`w-5 h-5 text-white drop-shadow-sm`} viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.19 0 2.34-.21 3.41-.6.3-.11.49-.4.49-.72v-.68c0-.41-.33-.75-.75-.75-.19 0-.37.07-.5.19-.74.27-1.54.41-2.37.41-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6c0 .83-.14 1.63-.41 2.37-.12.13-.19.31-.19.5 0 .42.34.75.75.75h.68c.32 0 .61-.19.72-.49.39-1.07.6-2.22.6-3.41C22 6.48 17.52 2 12 2z"/>
                             <circle cx="9" cy="10" r="1.5"/>
                             <circle cx="15" cy="10" r="1.5"/>
