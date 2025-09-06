@@ -242,8 +242,8 @@ const SavedProvidersScreen = () => {
                 onClick={() => navigate(-1)}
                 size="sm"
                 variant="subtle"
-                className="flex-shrink-0 !h-9 !w-9 sm:!h-10 sm:!w-10 !px-0 !py-0 rounded-xl !border-2 shadow-sm"
-                leftIcon={<ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />}
+                className="flex-shrink-0 !h-10 !w-10 !px-0 !py-0 rounded-xl !border-2 shadow-sm flex items-center justify-center"
+                leftIcon={<ArrowLeft className="w-5 h-5" />}
                 aria-label="Back to Dashboard"
               />
               <div className="flex-1 min-w-0">
