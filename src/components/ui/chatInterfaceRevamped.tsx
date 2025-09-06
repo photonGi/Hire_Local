@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../theme/useTheme";
+import { useAuth } from "../../contexts/AuthContextHooks";
+import { BusinessService } from "../../services/BusinessService";
+import type { Business } from "../../types/firebase";
 
 /* ------------------- Types ------------------- */
 type Sender = "user" | "ai";
@@ -12,6 +16,8 @@ interface Provider {
   details?: string;
   location_note?: string;
   confidence?: string;
+  saved?: boolean;
+  saveId?: string;
 }
 
 interface Message {
@@ -73,6 +79,19 @@ const useAutoScroll = (ref: React.RefObject<HTMLElement>, dependency: unknown) =
 const SendIcon: React.FC = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
     <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+  </svg>
+);
+
+const BackIcon: React.FC = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M19 12H5" />
+    <path d="M12 19l-7-7 7-7" />
+  </svg>
+);
+
+const BookmarkIcon: React.FC<{ filled?: boolean }> = ({ filled = false }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
   </svg>
 );
 
@@ -249,7 +268,52 @@ const GlobalStyles: React.FC<{ theme: "light" | "dark" }> = ({ theme }) => (
 
 const ProviderCard: React.FC<{ provider: Provider; theme: "light" | "dark" }> = ({ provider, theme }) => {
   const [expanded, setExpanded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(provider.saved || false);
+  const { user } = useAuth();
   const isLongDetails = (provider.details?.length ?? 0) > 100;
+
+  const handleSave = async () => {
+    if (!user) {
+      // Could show a login prompt here
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (saved) {
+        // Unsave the business
+        if (provider.saveId) {
+          await BusinessService.unsaveBusiness(user.uid, provider.saveId);
+          setSaved(false);
+        }
+      } else {
+        // Save the business
+        const businessData: Business = {
+          id: provider.saveId || Date.now().toString(), // Temporary ID if not available
+          name: provider.name,
+          description: provider.details || '',
+          category: 'service', // Default category
+          services: [],
+          location: {
+            address: provider.address || '',
+          },
+          phone: provider.phone || '',
+          address: provider.address || '',
+          saved: true,
+        };
+
+        const saveId = await BusinessService.saveBusiness(user.uid, businessData);
+        provider.saveId = saveId;
+        setSaved(true);
+      }
+    } catch (error) {
+      console.error('Error saving/unsaving business:', error);
+      // Could show an error toast here
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const themeClasses = {
     card: theme === "dark"
@@ -260,6 +324,13 @@ const ProviderCard: React.FC<{ provider: Provider; theme: "light" | "dark" }> = 
     showMore: theme === "dark" ? "mt-2 text-teal-400 hover:text-teal-300 font-semibold text-xs transition-colors" : "mt-2 text-blue-500 hover:text-blue-400 font-semibold text-xs transition-colors",
     contact: theme === "dark" ? "flex items-center gap-3 text-slate-300 text-sm" : "flex items-center gap-3 text-slate-600 text-sm",
     divider: theme === "dark" ? "mt-4 pt-4 border-t border-slate-700/50 space-y-3" : "mt-4 pt-4 border-t border-slate-300/50 space-y-3",
+    saveButton: theme === "dark" 
+      ? saved 
+        ? "w-8 h-8 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-300 hover:text-teal-200 transition-all duration-200 flex items-center justify-center shadow-sm"
+        : "w-8 h-8 rounded-lg bg-slate-700/40 hover:bg-slate-600/60 border border-slate-600/50 text-slate-400 hover:text-slate-300 transition-all duration-200 flex items-center justify-center shadow-sm"
+      : saved
+        ? "w-8 h-8 rounded-lg bg-blue-100/80 hover:bg-blue-200/80 border border-blue-300/60 text-blue-600 hover:text-blue-700 transition-all duration-200 flex items-center justify-center shadow-sm"
+        : "w-8 h-8 rounded-lg bg-gray-100/80 hover:bg-gray-200/80 border border-gray-300/60 text-gray-500 hover:text-gray-600 transition-all duration-200 flex items-center justify-center shadow-sm",
   };
 
   return (
@@ -271,7 +342,24 @@ const ProviderCard: React.FC<{ provider: Provider; theme: "light" | "dark" }> = 
       className={themeClasses.card}
     >
       <div className="flex-grow">
-        <h3 className={themeClasses.name}>{provider.name}</h3>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-grow">
+            <h3 className={themeClasses.name}>{provider.name}</h3>
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={saving || !user}
+            className={themeClasses.saveButton}
+            aria-label={saved ? "Remove from saved" : "Save business"}
+            title={saved ? "Remove from saved" : "Save business"}
+          >
+            {saving ? (
+              <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <BookmarkIcon filled={saved} />
+            )}
+          </button>
+        </div>
         <div className={themeClasses.details}>
           <p className={`${!expanded && isLongDetails ? "line-clamp-2" : ""}`}>{provider.details}</p>
           {isLongDetails && (
@@ -554,6 +642,7 @@ const InputForm: React.FC<{
 /* ------------------- Main App ------------------- */
 export default function App(): JSX.Element {
   const { theme } = useTheme();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [aiStage, setAiStage] = useState<AiStage>("idle");
@@ -568,6 +657,7 @@ export default function App(): JSX.Element {
     header: theme === "dark" ? "sticky top-0 z-20 p-4 bg-slate-950/70 backdrop-blur-lg border-b border-slate-800/50" : "sticky top-0 z-20 p-4 bg-gradient-to-r from-gray-500/95 via-gray-600/95 to-gray-700/95 backdrop-blur-lg border-b border-gray-400/60 shadow-xl shadow-gray-600/40",
     headerTitle: theme === "dark" ? "font-semibold text-white" : "font-semibold bg-gradient-to-r from-gray-50 via-white to-gray-100 bg-clip-text text-transparent",
     headerSubtitle: theme === "dark" ? "text-sm text-slate-400" : "text-sm text-gray-200 font-medium",
+    backButton: theme === "dark" ? "flex items-center justify-center w-10 h-10 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 hover:text-white transition-all duration-200 shadow-sm" : "flex items-center justify-center w-10 h-10 rounded-lg bg-white/20 hover:bg-white/30 border border-white/30 text-white hover:text-gray-100 transition-all duration-200 shadow-sm backdrop-blur-sm",
     footer: theme === "dark" ? "sticky bottom-0 z-20 p-4 bg-slate-950/70 backdrop-blur-lg" : "sticky bottom-0 z-20 p-4 bg-gradient-to-r from-slate-300/95 via-gray-200/90 to-slate-400/95 backdrop-blur-lg shadow-xl shadow-gray-700/40",
   };
 
@@ -652,6 +742,13 @@ export default function App(): JSX.Element {
       <GlobalStyles theme={theme} />
       <header className={themeClasses.header}>
         <div className="max-w-4xl mx-auto flex items-center gap-3">
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className={themeClasses.backButton}
+            aria-label="Back to Dashboard"
+          >
+            <BackIcon />
+          </button>
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-teal-500/20">S</div>
           <div>
             <h1 className={themeClasses.headerTitle}>Service Assistant</h1>

@@ -67,23 +67,6 @@ export interface BusinessLocation {
     lng: number;
   };
 }
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  services: string[];
-  location: BusinessLocation;
-  saved: boolean;
-  // Make these optional since saved businesses might not have them
-  contact?: any;
-  rating?: string;
-  hours?: any;
-  photos?: any[];
-  phone?: string;
-  website?: string;
-  reviews?: number;
-  savedAt?: Date;
-}
 
 // Add other types if needed
 export interface UserProfile {
