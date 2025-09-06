@@ -12,7 +12,6 @@ import {
   serverTimestamp,
   increment
 } from 'firebase/firestore';
-// @ts-ignore
 import { auth, db } from '../firebase/config';
 
 export interface UserActivity {
@@ -51,17 +50,19 @@ export const UserActivityService = {
     }
 
     try {
-      // @ts-ignore
+      console.log('[ACTIVITY] Initializing user activity for:', userId);
+      
       const currentUser = auth.currentUser;
       if (!currentUser || currentUser.uid !== userId) {
+        console.warn('[ACTIVITY] User not authenticated or UID mismatch:', { currentUser: currentUser?.uid, userId });
         throw new Error('User must be authenticated');
       }
 
-      // @ts-ignore
       const activityRef = doc(db, 'userActivity', userId);
       const activityDoc = await getDoc(activityRef);
 
       if (!activityDoc.exists()) {
+        console.log('[ACTIVITY] No existing activity document, creating new one');
         const initialActivity: Omit<UserActivity, 'searchHistory'> = {
           userId,
           totalSearches: 0,
@@ -79,6 +80,8 @@ export const UserActivityService = {
         });
 
         console.log('[ACTIVITY] User activity initialized for:', userId);
+      } else {
+        console.log('[ACTIVITY] User activity document already exists for:', userId);
       }
     } catch (error) {
       console.error('Error initializing user activity:', error);
@@ -93,7 +96,8 @@ export const UserActivityService = {
     }
 
     try {
-      // @ts-ignore
+      console.log('[ACTIVITY] Recording search:', { userId, query, providersFound, category });
+      
       const currentUser = auth.currentUser;
       if (!currentUser || currentUser.uid !== userId) {
         throw new Error('User must be authenticated');
@@ -102,9 +106,7 @@ export const UserActivityService = {
       // Ensure user activity document exists
       await UserActivityService.initializeUserActivity(userId);
 
-      // @ts-ignore
       const activityRef = doc(db, 'userActivity', userId);
-      // @ts-ignore
       const searchRecordRef = doc(collection(db, 'searchHistory'));
 
       // Create search record
@@ -116,6 +118,7 @@ export const UserActivityService = {
         timestamp: serverTimestamp()
       };
 
+      console.log('[ACTIVITY] Creating search record:', searchRecord);
       // Save search record
       await setDoc(searchRecordRef, searchRecord);
 
@@ -135,18 +138,22 @@ export const UserActivityService = {
 
         // Reset monthly stats if it's a new month
         shouldResetMonthly = (currentMonth !== lastMonth) || (currentYear !== lastYear);
+        console.log('[ACTIVITY] Should reset monthly stats:', shouldResetMonthly, { currentMonth, lastMonth, currentYear, lastYear });
       }
 
       // Update activity document
-      await updateDoc(activityRef, {
+      const updateData = {
         totalSearches: increment(1),
         totalProvidersFound: increment(providersFound),
         thisMonthSearches: shouldResetMonthly ? 1 : increment(1),
         lastSearchDate: serverTimestamp(),
         updatedAt: serverTimestamp()
-      });
+      };
+      
+      console.log('[ACTIVITY] Updating activity document with:', updateData);
+      await updateDoc(activityRef, updateData);
 
-      console.log('[ACTIVITY] Search recorded:', { query, providersFound, category });
+      console.log('[ACTIVITY] Search recorded successfully:', { query, providersFound, category });
     } catch (error) {
       console.error('Error recording search:', error);
       throw error;
@@ -160,7 +167,6 @@ export const UserActivityService = {
     }
 
     try {
-      // @ts-ignore
       const currentUser = auth.currentUser;
       if (!currentUser || currentUser.uid !== userId) {
         throw new Error('User must be authenticated');
@@ -169,7 +175,6 @@ export const UserActivityService = {
       // Ensure user activity document exists
       await UserActivityService.initializeUserActivity(userId);
 
-      // @ts-ignore
       const activityRef = doc(db, 'userActivity', userId);
       const activityDoc = await getDoc(activityRef);
 
@@ -181,7 +186,6 @@ export const UserActivityService = {
 
       // Get recent search history
       const searchHistoryQuery = firestoreQuery(
-        // @ts-ignore
         collection(db, 'searchHistory'),
         where('userId', '==', userId),
         orderBy('timestamp', 'desc'),
@@ -219,9 +223,12 @@ export const UserActivityService = {
   // Get activity stats with percentage changes
   getActivityStats: async (userId: string): Promise<ActivityStats> => {
     try {
+      console.log('[ACTIVITY] Getting activity stats for user:', userId);
       const activity = await UserActivityService.getUserActivity(userId);
+      console.log('[ACTIVITY] Raw activity data:', activity);
       
       if (!activity) {
+        console.log('[ACTIVITY] No activity found, returning default stats');
         return {
           totalSearches: 0,
           totalProvidersFound: 0,
@@ -243,7 +250,7 @@ export const UserActivityService = {
       const monthlyChange = activity.thisMonthSearches > 0 ? 
         `+${Math.min(Math.floor((activity.thisMonthSearches / 5) * 100), 100)}%` : '+0%';
 
-      return {
+      const stats = {
         totalSearches: activity.totalSearches,
         totalProvidersFound: activity.totalProvidersFound,
         thisMonthSearches: activity.thisMonthSearches,
@@ -251,6 +258,9 @@ export const UserActivityService = {
         providersChange,
         monthlyChange
       };
+      
+      console.log('[ACTIVITY] Calculated stats:', stats);
+      return stats;
     } catch (error) {
       console.error('Error getting activity stats:', error);
       // Return default stats on error
@@ -272,14 +282,12 @@ export const UserActivityService = {
     }
 
     try {
-      // @ts-ignore
       const currentUser = auth.currentUser;
       if (!currentUser || currentUser.uid !== userId) {
         throw new Error('User must be authenticated');
       }
 
       const searchHistoryQuery = firestoreQuery(
-        // @ts-ignore
         collection(db, 'searchHistory'),
         where('userId', '==', userId),
         orderBy('timestamp', 'desc'),

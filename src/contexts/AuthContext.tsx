@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { firebaseAuth, userService } from '../firebase/auth';
 import { User } from 'firebase/auth';
+import { UserActivityService } from '../services/UserActivityService';
 
 interface UserProfile {
   id: string;
@@ -99,6 +100,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             if (profile) {
               setUserProfile(profile);
+              
+              // Initialize user activity for existing users who might not have it
+              try {
+                await UserActivityService.initializeUserActivity(user.uid);
+              } catch (activityError) {
+                console.warn('[AUTH] Failed to initialize user activity:', activityError);
+                // Don't fail the auth process if activity initialization fails
+              }
             } else {
               // Fall back to basic profile if Firestore operations fail
               const basicProfile: UserProfile = {

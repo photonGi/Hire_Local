@@ -1,8 +1,8 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getAnalytics } from 'firebase/analytics';
-import { initializeFirestore } from 'firebase/firestore';
-import { setPersistence, browserLocalPersistence, onAuthStateChanged } from 'firebase/auth';
+import { initializeApp, FirebaseApp } from 'firebase/app';
+import { getAuth, Auth } from 'firebase/auth';
+import { getAnalytics, Analytics } from 'firebase/analytics';
+import { initializeFirestore, Firestore } from 'firebase/firestore';
+import { setPersistence, browserLocalPersistence } from 'firebase/auth';
 
 // Helper function to get environment variable with fallback
 const getEnvVar = (key: string): string => {
@@ -45,10 +45,10 @@ if (missingFields.length > 0) {
 }
 
 // Initialize Firebase
-let app;
-let auth;
-let analytics;
-let db;
+let app: FirebaseApp;
+let auth: Auth;
+let analytics: Analytics | undefined;
+let db: Firestore;
 
 try {
   app = initializeApp(firebaseConfig);

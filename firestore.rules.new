@@ -29,5 +29,38 @@ service cloud.firestore {
       // Only authenticated users can create/update businesses
       allow write: if isAuthenticated();
     }
+    
+    // User activity tracking - users can only access their own activity
+    match /userActivity/{userId} {
+      allow read, write: if isUser(userId);
+    }
+    
+    // Search history - users can only access their own search history
+    match /searchHistory/{searchId} {
+      allow read, write: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || 
+         request.data.userId == request.auth.uid);
+    }
+    
+    // Activity logs (legacy - keeping for compatibility)
+    match /activityLogs/{logId} {
+      allow read, write: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || 
+         request.data.userId == request.auth.uid);
+    }
+    
+    // Search queries (legacy - keeping for compatibility)
+    match /searchQueries/{queryId} {
+      allow read, write: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || 
+         request.data.userId == request.auth.uid);
+    }
+    
+    // Saved businesses (legacy - keeping for compatibility)
+    match /savedBusinesses/{saveId} {
+      allow read, write: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || 
+         request.data.userId == request.auth.uid);
+    }
   }
 }

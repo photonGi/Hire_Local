@@ -11,7 +11,8 @@ import {
   Calendar,
   Award,
   Moon,
-  Sun
+  Sun,
+  RefreshCw
 } from 'lucide-react';
 import PageTransition from './shared/PageTransition';
 import { useTheme } from '../theme/useTheme';
@@ -24,6 +25,7 @@ const Dashboard: React.FC = () => {
   const [profile, setProfile] = useState<any | null>(null);
   const [imageLoadError, setImageLoadError] = useState(false);
   const [activityStats, setActivityStats] = useState<ActivityStats | null>(null);
+  const [refreshingActivity, setRefreshingActivity] = useState(false);
   const { user } = useAuth();
   React.useEffect(() => {
     if (!user) return;
@@ -79,6 +81,34 @@ const Dashboard: React.FC = () => {
 
     fetchActivityStats();
   }, [user]);
+
+  // Refresh activity stats manually
+  const refreshActivityStats = async () => {
+    if (!user) return;
+    
+    setRefreshingActivity(true);
+    try {
+      // First try to initialize user activity in case it doesn't exist
+      await UserActivityService.initializeUserActivity(user.uid);
+      // Then fetch the latest stats
+      const stats = await UserActivityService.getActivityStats(user.uid);
+      setActivityStats(stats);
+      console.log('[DASHBOARD] Activity stats refreshed:', stats);
+    } catch (error) {
+      console.error('Error refreshing activity stats:', error);
+      // Set default stats on error
+      setActivityStats({
+        totalSearches: 0,
+        totalProvidersFound: 0,
+        thisMonthSearches: 0,
+        searchesChange: '+0%',
+        providersChange: '+0%',
+        monthlyChange: '+0%'
+      });
+    } finally {
+      setRefreshingActivity(false);
+    }
+  };
 
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
@@ -676,7 +706,22 @@ const lightThemeStyles = {
 
             {/* Stats Cards */}
             <div className="px-4 py-4">
-              <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-800'} mb-4`}>Your Activity</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>Your Activity</h3>
+                <button
+                  onClick={refreshActivityStats}
+                  disabled={refreshingActivity}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    isDark 
+                      ? 'bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white border border-white/20' 
+                      : 'bg-slate-100/80 hover:bg-slate-200/80 text-slate-600 hover:text-slate-800 border border-slate-300/50'
+                  } ${refreshingActivity ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}
+                  aria-label="Refresh activity stats"
+                >
+                  <RefreshCw className={`w-3 h-3 ${refreshingActivity ? 'animate-spin' : ''}`} />
+                  <span>{refreshingActivity ? 'Refreshing...' : 'Refresh'}</span>
+                </button>
+              </div>
               <div className="grid grid-cols-3 gap-4">
                 {stats.map((stat, index) => {
                   const IconComponent = stat.icon;

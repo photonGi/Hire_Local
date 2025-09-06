@@ -16,6 +16,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { auth, db } from './config';
+import { UserActivityService } from '../services/UserActivityService';
 
 export const googleProvider = new GoogleAuthProvider();
 
@@ -25,6 +26,15 @@ export const firebaseAuth = {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       await this.createUserProfile(result.user);
+      
+      // Initialize user activity for new or existing users
+      try {
+        await UserActivityService.initializeUserActivity(result.user.uid);
+      } catch (activityError) {
+        console.warn('Failed to initialize user activity:', activityError);
+        // Don't fail the login if activity initialization fails
+      }
+      
       return result.user;
     } catch (error) {
       console.error('Error signing in with Google:', error);
@@ -73,6 +83,15 @@ export const firebaseAuth = {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await this.createUserProfile(result.user);
+      
+      // Initialize user activity for new or existing users
+      try {
+        await UserActivityService.initializeUserActivity(result.user.uid);
+      } catch (activityError) {
+        console.warn('Failed to initialize user activity:', activityError);
+        // Don't fail the login if activity initialization fails
+      }
+      
       return result.user;
     } catch (error) {
       console.error('Error signing in with email:', error);
@@ -92,6 +111,15 @@ export const firebaseAuth = {
       }
       
       await this.createUserProfile(result.user);
+      
+      // Initialize user activity for new users
+      try {
+        await UserActivityService.initializeUserActivity(result.user.uid);
+      } catch (activityError) {
+        console.warn('Failed to initialize user activity:', activityError);
+        // Don't fail the signup if activity initialization fails
+      }
+      
       return result.user;
     } catch (error) {
       console.error('Error signing up with email:', error);
