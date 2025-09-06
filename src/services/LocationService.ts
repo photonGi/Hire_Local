@@ -199,18 +199,24 @@ export class LocationService {
     const parts = locationText.split(',').map(part => part.trim());
     const area = parts[0] || locationText;
     const city = parts[1] || parts[0];
-    const state = parts[2];
+    const state = parts[2] || undefined;
     const country = parts[3] || 'unknown';
 
-    return {
+    const location: UserLocation = {
       area,
       city,
-      state,
       country,
       fullAddress: locationText,
       lastUpdated: new Date(),
       source: 'manual'
     };
+
+    // Only add state if it has a value
+    if (state) {
+      location.state = state;
+    }
+
+    return location;
   }
 
   // Save location to user profile

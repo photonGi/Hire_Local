@@ -237,6 +237,10 @@ export const userService = {
         radiusKm: data.radiusKm || 25,
         accountType: data.accountType || 'Free',
         localeType: data.localeType || 'Urban',
+        location: data.location ? {
+          ...data.location,
+          lastUpdated: data.location.lastUpdated?.toDate?.() || new Date(data.location.lastUpdated)
+        } : undefined,
         notifications: data.notifications || {
           emailUpdates: true,
           providerReplies: true,

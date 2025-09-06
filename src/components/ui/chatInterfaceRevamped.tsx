@@ -106,6 +106,13 @@ const LocationIcon: React.FC = () => (
   </svg>
 );
 
+const EditLocationIcon: React.FC = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </svg>
+);
+
 const PhoneIcon: React.FC = () => (
   <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
@@ -186,6 +193,118 @@ const LiveOrbIcon: React.FC<{ isTyping?: boolean }> = ({ isTyping }) => (
 const UserGlowingOrbIcon: React.FC = () => (
   <div className="w-9 h-9 rounded-full flex-shrink-0 hidden sm:flex items-center justify-center shadow-md bg-white glowing-orb" />
 );
+
+/* ------------------- LocationUpdateButton Component ------------------- */
+const LocationUpdateButton: React.FC<{ 
+  userLocation: UserLocation | null; 
+  theme: "light" | "dark"; 
+  onClick: () => void 
+}> = ({ userLocation, theme, onClick }) => {
+  const themeClasses = {
+    button: theme === "dark"
+      ? "flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 hover:text-white transition-all duration-200 shadow-sm"
+      : "flex items-center gap-2 px-3 py-2 rounded-lg bg-white/70 hover:bg-white/90 border border-slate-300/60 text-slate-600 hover:text-slate-800 transition-all duration-200 shadow-sm backdrop-blur-sm",
+    text: theme === "dark" ? "text-xs font-medium max-w-32 truncate" : "text-xs font-medium max-w-32 truncate",
+  };
+
+  const locationDisplay = userLocation 
+    ? locationService.formatLocationForDisplay(userLocation)
+    : "Set Location";
+
+  return (
+    <button onClick={onClick} className={`${themeClasses.button} group`} title="Update Location">
+      <LocationIcon />
+      <span className={themeClasses.text}>{locationDisplay}</span>
+      <EditLocationIcon />
+    </button>
+  );
+};
+
+/* ------------------- Enhanced Location Modal Component ------------------- */
+const EnhancedLocationModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onManualLocationSelect: (location: string) => void;
+  onGPSLocationRequest: () => void;
+  theme: "light" | "dark";
+}> = ({ isOpen, onClose, onManualLocationSelect, onGPSLocationRequest, theme }) => {
+  const [customLocation, setCustomLocation] = useState("");
+
+  if (!isOpen) return null;
+
+  const themeClasses = {
+    backdrop: "fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4",
+    modal: theme === "dark"
+      ? "bg-slate-800/90 backdrop-blur-lg rounded-2xl border border-slate-700/50 shadow-2xl max-w-md w-full"
+      : "bg-white/95 backdrop-blur-lg rounded-2xl border border-slate-300/50 shadow-2xl max-w-md w-full",
+    title: theme === "dark" ? "text-xl font-bold text-white mb-2" : "text-xl font-bold text-slate-800 mb-2",
+    subtitle: theme === "dark" ? "text-slate-400 text-sm mb-6" : "text-slate-600 text-sm mb-6",
+    button: theme === "dark"
+      ? "w-full p-4 rounded-xl bg-slate-700/60 hover:bg-slate-600/80 border border-slate-600/50 text-white transition-all duration-200 flex items-center gap-3"
+      : "w-full p-4 rounded-xl bg-slate-100/80 hover:bg-slate-200/80 border border-slate-300/60 text-slate-800 transition-all duration-200 flex items-center gap-3",
+    input: theme === "dark"
+      ? "w-full p-3 rounded-lg bg-slate-700/60 border border-slate-600/50 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/50"
+      : "w-full p-3 rounded-lg bg-white/80 border border-slate-300/60 text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50",
+    submitButton: theme === "dark"
+      ? "w-full mt-3 py-3 rounded-lg bg-teal-500 hover:bg-teal-600 text-white font-medium transition-colors"
+      : "w-full mt-3 py-3 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-medium transition-colors",
+  };
+
+  const handleGPSRequest = () => {
+    onGPSLocationRequest();
+    onClose();
+  };
+
+  const handleManualSubmit = () => {
+    if (customLocation.trim()) {
+      onManualLocationSelect(customLocation.trim());
+      onClose();
+      setCustomLocation("");
+    }
+  };
+
+  return (
+    <div className={themeClasses.backdrop} onClick={onClose}>
+      <div className={themeClasses.modal} onClick={(e) => e.stopPropagation()}>
+        <div className="p-6">
+          <h2 className={themeClasses.title}>Update Location</h2>
+          <p className={themeClasses.subtitle}>Choose how you'd like to set your location</p>
+          
+          <div className="space-y-4">
+            <button onClick={handleGPSRequest} className={themeClasses.button}>
+              <div className="w-10 h-10 rounded-lg bg-teal-500/20 flex items-center justify-center">
+                <LocationIcon />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-medium">Use Current Location</p>
+                <p className="text-xs opacity-70">Automatically detect via GPS</p>
+              </div>
+            </button>
+
+            <div className="space-y-3">
+              <p className="text-sm font-medium opacity-80">Or enter manually:</p>
+              <input
+                type="text"
+                value={customLocation}
+                onChange={(e) => setCustomLocation(e.target.value)}
+                placeholder="e.g., Downtown Lahore, Pakistan"
+                className={themeClasses.input}
+                onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
+              />
+              <button
+                onClick={handleManualSubmit}
+                disabled={!customLocation.trim()}
+                className={`${themeClasses.submitButton} disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                Set Location
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 /* ------------------- UI Components ------------------- */
 const RevealedText: React.FC<{ text: string; onComplete: () => void; isTyping: boolean }> = ({ text, onComplete, isTyping }) => {
@@ -271,11 +390,9 @@ const GlobalStyles: React.FC<{ theme: "light" | "dark" }> = ({ theme }) => (
 );
 
 const ProviderCard: React.FC<{ provider: Provider; theme: "light" | "dark" }> = ({ provider, theme }) => {
-  const [expanded, setExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(provider.saved || false);
   const { user } = useAuth();
-  const isLongDetails = (provider.details?.length ?? 0) > 100;
 
   const handleSave = async () => {
     if (!user) {
@@ -363,14 +480,6 @@ const ProviderCard: React.FC<{ provider: Provider; theme: "light" | "dark" }> = 
               <BookmarkIcon filled={saved} />
             )}
           </button>
-        </div>
-        <div className={themeClasses.details}>
-          <p className={`${!expanded && isLongDetails ? "line-clamp-2" : ""}`}>{provider.details}</p>
-          {isLongDetails && (
-            <button onClick={() => setExpanded((s) => !s)} className={themeClasses.showMore}>
-              {expanded ? "Show Less" : "Show More"}
-            </button>
-          )}
         </div>
       </div>
 
@@ -665,6 +774,9 @@ export default function App(): JSX.Element {
   const [willShowProviders, setWillShowProviders] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showEnhancedLocationModal, setShowEnhancedLocationModal] = useState(false);
+  const [locationManuallySet, setLocationManuallySet] = useState(false);
+  const [locationInitialized, setLocationInitialized] = useState(false);
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   useAutoScroll(scrollContainerRef, messages.length + (aiStage !== "idle" ? 1 : 0));
@@ -672,89 +784,91 @@ export default function App(): JSX.Element {
 
   // Initialize location on component mount
   useEffect(() => {
-    initializeUserLocation();
+    if (!locationInitialized && user && userProfile) {
+      setLocationInitialized(true);
+      initializeUserLocation();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, userProfile]);
 
-  const initializeUserLocation = async () => {
-    if (!user) {
+  // Handle cases where userProfile.location becomes available after initial load
+  useEffect(() => {
+    if (user && userProfile?.location && !userLocation && !locationManuallySet) {
+      console.log('Setting user location from updated profile:', userProfile.location);
+      setUserLocation(userProfile.location);
+      locationService.setCachedLocation(userProfile.location);
+    }
+  }, [user, userProfile?.location, userLocation, locationManuallySet]);
+
+  const initializeUserLocation = useCallback(async () => {
+    if (!user || locationManuallySet) {
       return;
     }
 
+    console.log('Initializing user location once...');
+    console.log('Current userProfile:', userProfile);
+    console.log('userProfile.location:', userProfile?.location);
+
     try {
-      // Check if user already has location in profile
+      // Check if user already has location in profile and it's recent
       if (userProfile?.location && locationService.isLocationRecent(userProfile.location)) {
-        console.log('Using saved location from profile:', userProfile.location);
+        console.log('Using saved location from Firebase profile:', userProfile.location);
         setUserLocation(userProfile.location);
         locationService.setCachedLocation(userProfile.location);
         return;
       }
 
-      // Check GPS permission status
-      if ('permissions' in navigator) {
-        try {
-          const permission = await navigator.permissions.query({ name: 'geolocation' });
-          
-          if (permission.state === 'granted') {
-            console.log('GPS permission granted, getting current location...');
-            await getCurrentLocationAndSave();
-          } else if (permission.state === 'prompt') {
-            // Request permission
-            await requestLocationPermission();
-          } else {
-            // Permission denied, show modal for manual input
-            console.log('GPS permission denied, showing location modal');
-            setShowLocationModal(true);
+      // If we have a location but it's not recent, log that
+      if (userProfile?.location) {
+        console.log('Location exists in Firebase but is not recent, will fetch new GPS location');
+      } else {
+        console.log('No location found in Firebase profile, will fetch GPS location');
+      }
+
+      // Try to get GPS location directly without calling other functions
+      try {
+        const location = await locationService.getCurrentLocation();
+        if (location && user) {
+          console.log('Got GPS location during initialization:', location);
+          setUserLocation(location);
+          await locationService.saveUserLocation(user.uid, location);
+          if (updateProfile) {
+            await updateProfile({ location });
           }
-        } catch (error) {
-          console.error('Error checking permissions:', error);
+        } else {
           setShowLocationModal(true);
         }
-      } else {
-        console.log('Permissions API not available, requesting location directly');
-        await requestLocationPermission();
+      } catch (error) {
+        console.error('GPS error during initialization:', error);
+        setShowLocationModal(true);
       }
     } catch (error) {
       console.error('Error initializing location:', error);
       setShowLocationModal(true);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const requestLocationPermission = async () => {
-    try {
-      const location = await locationService.getCurrentLocation();
-      if (location && user) {
-        console.log('GPS location obtained:', location);
-        setUserLocation(location);
-        await locationService.saveUserLocation(user.uid, location);
-        
-        // Update the auth context profile
-        if (updateProfile) {
-          await updateProfile({ location });
-        }
-      } else {
-        console.log('GPS location not available, showing location modal');
-        setShowLocationModal(true);
-      }
-    } catch (error) {
-      console.error('Error requesting location permission:', error);
-      setShowLocationModal(true);
-    }
-  };
-
-  const getCurrentLocationAndSave = async () => {
+  // Separate function for manual GPS location requests (from header button)
+  const handleManualGPSLocationRequest = async () => {
     try {
       const location = await locationService.getCurrentLocation();
       if (location && user) {
         setUserLocation(location);
         await locationService.saveUserLocation(user.uid, location);
         
-        // Update the auth context profile
+        // Update the auth context profile to sync with UserProfileScreen
         if (updateProfile) {
           await updateProfile({ location });
         }
+        
+        // Mark location as manually set to prevent auto-fetching
+        setLocationManuallySet(true);
+        
+        console.log('Manual GPS location updated successfully:', locationService.formatLocationForDisplay(location));
       }
     } catch (error) {
-      console.error('Error getting current location:', error);
+      console.error('Error getting manual GPS location:', error);
       setShowLocationModal(true);
     }
   };
@@ -769,12 +883,18 @@ export default function App(): JSX.Element {
       setUserLocation(manualLocation);
       await locationService.saveUserLocation(user.uid, manualLocation);
       
-      // Update the auth context profile
+      // Update the auth context profile to sync with UserProfileScreen
       if (updateProfile) {
         await updateProfile({ location: manualLocation });
       }
       
+      // Mark location as manually set to prevent auto-fetching
+      setLocationManuallySet(true);
+      
       setShowLocationModal(false);
+      
+      // Show a subtle notification that location was updated
+      console.log('Location updated successfully:', locationService.formatLocationForDisplay(manualLocation));
     } catch (error) {
       console.error('Error saving manual location:', error);
       // Could show error toast here
@@ -900,18 +1020,27 @@ export default function App(): JSX.Element {
     <div className={themeClasses.mainContainer}>
       <GlobalStyles theme={theme} />
       <header className={themeClasses.header}>
-        <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className={themeClasses.backButton}
-            aria-label="Back to Dashboard"
-          >
-            <BackIcon />
-          </button>
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-teal-500/20">S</div>
-          <div>
-            <h1 className={themeClasses.headerTitle}>Service Assistant</h1>
-            <p className={themeClasses.headerSubtitle}>Your Local Provider Finder</p>
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => navigate('/dashboard')}
+              className={themeClasses.backButton}
+              aria-label="Back to Dashboard"
+            >
+              <BackIcon />
+            </button>
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-teal-500/20">S</div>
+            <div>
+              <h1 className={themeClasses.headerTitle}>Service Assistant</h1>
+              <p className={themeClasses.headerSubtitle}>Your Local Provider Finder</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <LocationUpdateButton 
+              userLocation={userLocation} 
+              theme={theme} 
+              onClick={() => setShowEnhancedLocationModal(true)} 
+            />
           </div>
         </div>
       </header>
@@ -959,6 +1088,15 @@ export default function App(): JSX.Element {
         isOpen={showLocationModal}
         onClose={() => setShowLocationModal(false)}
         onLocationSelect={handleManualLocationSelect}
+        theme={theme}
+      />
+
+      {/* Enhanced Location Modal */}
+      <EnhancedLocationModal
+        isOpen={showEnhancedLocationModal}
+        onClose={() => setShowEnhancedLocationModal(false)}
+        onManualLocationSelect={handleManualLocationSelect}
+        onGPSLocationRequest={handleManualGPSLocationRequest}
         theme={theme}
       />
     </div>

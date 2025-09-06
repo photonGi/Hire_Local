@@ -109,6 +109,8 @@ const AuthScreen: React.FC = () => {
           setError('Password is too weak. Please choose a stronger password');
         } else if (error.message.includes('auth/invalid-email')) {
           setError('Please enter a valid email address');
+        } else if (error.message.includes('auth/invalid-credential')) {
+          setError('Invalid credentials, please check your email and password again.');
         } else {
           setError(error.message);
         }
@@ -254,7 +256,7 @@ const AuthScreen: React.FC = () => {
                       try {
                         await resetPassword(email);
                         setError('Password reset email sent! Check your inbox.');
-                      } catch (error) {
+                      } catch {
                         setError('Failed to send password reset email. Please try again.');
                       }
                     }}
@@ -280,13 +282,6 @@ const AuthScreen: React.FC = () => {
               >
                 {loading || authLoading ? 'Please wait...' : (isSignUp ? 'Sign Up' : 'Sign In')}
               </button>
-
-              {/* Error Message */}
-              {error && (
-                <div className="p-4 mb-4 text-sm text-red-700 bg-red-100 dark:bg-red-200/10 dark:text-red-400 rounded-xl">
-                  {error}
-                </div>
-              )}
 
               {/* Or divider */}
               <div className="relative my-6">

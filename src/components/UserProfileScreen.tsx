@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, Shield, Bell, MapPin, User, Lock, LogOut, Edit3, Mail, Phone, CheckCircle2, ChevronDown, ChevronUp, Link2, Loader2, AlertTriangle, X, CheckCircle } from 'lucide-react';
 import { useTheme } from '../theme/useTheme';
 import { useAuth } from '../contexts/AuthContextHooks';
+import { locationService } from '../services/LocationService';
+import type { UserLocation } from '../types/firebase';
 
 const UserProfileScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -49,6 +51,8 @@ const UserProfileScreen: React.FC = () => {
 
   // Sync profile data when userProfile changes
   useEffect(() => {
+    console.log('[UserProfileScreen] userProfile updated:', userProfile);
+    console.log('[UserProfileScreen] userProfile.location:', userProfile?.location);
     if (userProfile) {
       setProfile({
         name: userProfile.displayName || user?.displayName || '',
@@ -216,7 +220,14 @@ const UserProfileScreen: React.FC = () => {
     }, 800);
   });
 
-  const hasProfileChanged = useMemo(() => JSON.stringify(profile) !== JSON.stringify(baseline.profile), [profile, baseline.profile]);
+  const hasProfileChanged = useMemo(() => {
+    // Compare profile excluding address field since it's handled separately
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { address: _, ...profileForComparison } = profile;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars  
+    const { address: __, ...baselineForComparison } = baseline.profile;
+    return JSON.stringify(profileForComparison) !== JSON.stringify(baselineForComparison);
+  }, [profile, baseline.profile]);
   const hasAccountsChanged = useMemo(() => JSON.stringify(connectedAccounts) !== JSON.stringify(baseline.connectedAccounts), [connectedAccounts, baseline.connectedAccounts]);
   const dirtySections = useMemo(() => {
     const arr:string[] = [];
@@ -234,11 +245,10 @@ const UserProfileScreen: React.FC = () => {
     pushToast('Saving changes...', 'info');
     
     try {
-      // Prepare the profile data to save
+      // Prepare the profile data to save (excluding address since it's handled separately)
       const profileData = {
         displayName: profile.name,
         phone: profile.phone,
-        address: profile.address,
         accountType: profile.accountType,
         connectedAccounts: connectedAccounts,
         updatedAt: new Date()
@@ -277,6 +287,30 @@ const UserProfileScreen: React.FC = () => {
     setPwdSubmitting(false);
     setShowPwdModal(false);
     pushToast('Password Changed', 'success');
+  };
+
+  // Handle location update from address field
+  const handleLocationUpdate = async () => {
+    if (!profile.address.trim() || !user) return;
+    
+    try {
+      // Create a new location from the address input
+      const newLocation: UserLocation = locationService.createManualLocation(profile.address.trim());
+      
+      // Save the location using LocationService for consistency
+      await locationService.saveUserLocation(user.uid, newLocation);
+      
+      // Update the profile with the new location
+      await updateProfile({ location: newLocation });
+      
+      // Clear the address field since we've saved it as a proper location
+      setProfile(prev => ({ ...prev, address: '' }));
+      
+      pushToast('Location Updated', 'success', 'Your location has been saved successfully');
+    } catch (error) {
+      console.error('Error updating location:', error);
+      pushToast('Location Update Failed', 'error', 'Failed to update location. Please try again.');
+    }
   };
 
   const handleLogout = async () => {
@@ -382,7 +416,7 @@ const UserProfileScreen: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <button onClick={() => setEditing(e=>{ if(!e) pushToast('Edit Mode Enabled','info','Changes are local only'); else if(isDirty) pushToast('Unsaved Changes','info','Remember to save'); return !e;})} className="px-2.5 sm:px-3 h-9 sm:h-10 rounded-xl text-xs sm:text-sm font-semibold relative group overflow-hidden transition-all">
+                <button onClick={() => setEditing(e=>{ if(!e) pushToast('Edit Mode Enabled','info','Update Profile'); else if(isDirty) pushToast('Unsaved Changes','info','Remember to save'); return !e;})} className="px-2.5 sm:px-3 h-9 sm:h-10 rounded-xl text-xs sm:text-sm font-semibold relative group overflow-hidden transition-all">
                   <span className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 group-hover:from-blue-500 group-hover:to-pink-500 transition" />
                   <span className="relative flex items-center gap-1.5 sm:gap-2 text-white">
                     <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> 
@@ -501,7 +535,7 @@ const UserProfileScreen: React.FC = () => {
             {sectionWrapper('location', 'Location Preferences', <MapPin className="w-5 h-5" />, (
               <div className="space-y-6">
                 {/* Current Location Display */}
-                {userProfile?.location && (
+                {userProfile?.location ? (
                   <div className={`p-4 rounded-xl border ${theme === 'dark' 
                     ? 'bg-blue-500/10 border-blue-400/20' 
                     : 'bg-slate-50 border-slate-200'
@@ -526,18 +560,50 @@ const UserProfileScreen: React.FC = () => {
                       </div>
                     </div>
                   </div>
+                ) : (
+                  <div className={`p-4 rounded-xl border ${theme === 'dark' 
+                    ? 'bg-orange-500/10 border-orange-400/20' 
+                    : 'bg-orange-50 border-orange-200'
+                  }`}>
+                    <label className={`text-xs font-medium tracking-wide ${theme === 'dark' ? 'text-orange-200/80' : 'text-orange-600'}`}>Location Status</label>
+                    <div className="mt-2 flex items-start gap-3">
+                      <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-orange-500/20' : 'bg-orange-100'}`}>
+                        <MapPin className={`w-4 h-4 ${theme === 'dark' ? 'text-orange-300' : 'text-orange-600'}`} />
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-sm font-medium ${theme === 'dark' ? 'text-orange-200' : 'text-orange-800'}`}>
+                          No location set
+                        </p>
+                        <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-orange-200/60' : 'text-orange-600'}`}>
+                          Visit the chat interface to set your location automatically or manually
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 )}
                 
                 <div className="space-y-2">
                   <label className={`text-xs font-medium tracking-wide ${theme === 'dark' ? 'text-blue-200/60' : 'text-slate-600'}`}>Update Location</label>
-                  <input disabled={!editing} value={profile.address} onChange={e=>setProfile(p=>({...p, address:e.target.value}))} 
-                    placeholder="Enter new location..."
-                    className={`w-full rounded-xl px-4 py-3 text-sm transition disabled:opacity-60 disabled:cursor-not-allowed ${theme === 'dark' 
-                    ? 'glass-input text-white' 
-                    : 'glass-input-light text-slate-800'
-                  }`} />
+                  <div className="flex gap-2">
+                    <input disabled={!editing} value={profile.address} onChange={e=>setProfile(p=>({...p, address:e.target.value}))} 
+                      placeholder="Enter new location..."
+                      className={`flex-1 rounded-xl px-4 py-3 text-sm transition disabled:opacity-60 disabled:cursor-not-allowed ${theme === 'dark' 
+                      ? 'glass-input text-white' 
+                      : 'glass-input-light text-slate-800'
+                    }`} />
+                    <button 
+                      onClick={handleLocationUpdate}
+                      disabled={!editing || !profile.address.trim()}
+                      className={`px-4 py-3 rounded-xl text-sm font-medium transition disabled:opacity-40 disabled:cursor-not-allowed ${theme === 'dark'
+                        ? 'bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-300 hover:text-teal-200'
+                        : 'bg-blue-100/80 hover:bg-blue-200/80 border border-blue-300/60 text-blue-600 hover:text-blue-700'
+                      }`}
+                    >
+                      Save
+                    </button>
+                  </div>
                   <p className={`text-xs ${theme === 'dark' ? 'text-blue-200/50' : 'text-slate-500'}`}>
-                    Enter a new location to update your current location
+                    Enter a new location to update your current location. This will sync with your chat preferences.
                   </p>
                 </div>
               </div>
