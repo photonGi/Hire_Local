@@ -9,7 +9,12 @@ export const ProfileService = {
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as UserProfile;
+        const data = docSnap.data();
+        // Convert Firebase Timestamps to Dates for location if it exists
+        if (data.location?.lastUpdated) {
+          data.location.lastUpdated = data.location.lastUpdated.toDate();
+        }
+        return { id: docSnap.id, ...data } as UserProfile;
       }
       return null;
     } catch (error) {

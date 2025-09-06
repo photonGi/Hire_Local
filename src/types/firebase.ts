@@ -10,6 +10,21 @@ export interface UserProfile {
     notifications?: boolean;
   };
   savedBusinesses?: string[]; // Array of business IDs
+  location?: UserLocation;
+}
+
+export interface UserLocation {
+  area: string;
+  city: string;
+  state?: string;
+  country: string;
+  fullAddress: string;
+  coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
+  lastUpdated: Date;
+  source: 'gps' | 'manual'; // How the location was obtained
 }
 
 export interface ChatMessage {

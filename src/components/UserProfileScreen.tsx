@@ -535,12 +535,45 @@ const UserProfileScreen: React.FC = () => {
 
             {sectionWrapper('location', 'Location Preferences', <MapPin className="w-5 h-5" />, (
               <div className="space-y-6">
+                {/* Current Location Display */}
+                {userProfile?.location && (
+                  <div className={`p-4 rounded-xl border ${theme === 'dark' 
+                    ? 'bg-blue-500/10 border-blue-400/20' 
+                    : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <label className={`text-xs font-medium tracking-wide ${theme === 'dark' ? 'text-blue-200/80' : 'text-slate-600'}`}>Current Location</label>
+                    <div className="mt-2 flex items-start gap-3">
+                      <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-blue-500/20' : 'bg-slate-200'}`}>
+                        <MapPin className={`w-4 h-4 ${theme === 'dark' ? 'text-blue-300' : 'text-slate-600'}`} />
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+                          {userProfile.location.area && userProfile.location.area !== 'your area' && userProfile.location.area}
+                          {userProfile.location.city && userProfile.location.city !== 'your location' && userProfile.location.city !== userProfile.location.area && 
+                            (userProfile.location.area && userProfile.location.area !== 'your area' ? `, ${userProfile.location.city}` : userProfile.location.city)}
+                          {userProfile.location.state && `, ${userProfile.location.state}`}
+                          {userProfile.location.country && userProfile.location.country !== 'unknown' && `, ${userProfile.location.country}`}
+                        </p>
+                        <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-blue-200/60' : 'text-slate-500'}`}>
+                          {userProfile.location.source === 'gps' ? '📍 GPS Location' : '✏️ Manual Entry'} • 
+                          Updated {new Date(userProfile.location.lastUpdated).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="space-y-2">
-                  <label className={`text-xs font-medium tracking-wide ${theme === 'dark' ? 'text-blue-200/60' : 'text-slate-600'}`}>Primary Address</label>
-                  <input disabled={!editing} value={profile.address} onChange={e=>setProfile(p=>({...p, address:e.target.value}))} className={`w-full rounded-xl px-4 py-3 text-sm transition disabled:opacity-60 disabled:cursor-not-allowed ${theme === 'dark' 
+                  <label className={`text-xs font-medium tracking-wide ${theme === 'dark' ? 'text-blue-200/60' : 'text-slate-600'}`}>Primary Address (Optional)</label>
+                  <input disabled={!editing} value={profile.address} onChange={e=>setProfile(p=>({...p, address:e.target.value}))} 
+                    placeholder="Enter additional address details..."
+                    className={`w-full rounded-xl px-4 py-3 text-sm transition disabled:opacity-60 disabled:cursor-not-allowed ${theme === 'dark' 
                     ? 'glass-input text-white' 
                     : 'glass-input-light text-slate-800'
                   }`} />
+                  <p className={`text-xs ${theme === 'dark' ? 'text-blue-200/50' : 'text-slate-500'}`}>
+                    This supplements your main location for more specific searches
+                  </p>
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">

@@ -5,7 +5,10 @@ import { useTheme } from "../../theme/useTheme";
 import { useAuth } from "../../contexts/AuthContextHooks";
 import { BusinessService } from "../../services/BusinessService";
 import { UserActivityService } from "../../services/UserActivityService";
+import { locationService } from "../../services/LocationService";
+import { LocationModal } from "../LocationModal";
 import type { Business } from "../../types/firebase";
+import type { UserLocation } from "../../types/firebase";
 
 /* ------------------- Types ------------------- */
 type Sender = "user" | "ai";
@@ -541,7 +544,7 @@ const AIThinkingBubble: React.FC<{ stage: Exclude<AiStage, "idle">; willShowProv
 };
 
 /* ------------------- WelcomeScreen ------------------- */
-const WelcomeScreen: React.FC<{ onSelect: (query: string) => void; theme: "light" | "dark" }> = ({ onSelect, theme }) => {
+const WelcomeScreen: React.FC<{ onSelect: (query: string) => void; theme: "light" | "dark"; userLocation: UserLocation | null }> = ({ onSelect, theme, userLocation }) => {
   const services = [
     { name: "Plumber", icon: PlumberIcon },
     { name: "Electrician", icon: ElectricianIcon },
@@ -551,16 +554,17 @@ const WelcomeScreen: React.FC<{ onSelect: (query: string) => void; theme: "light
     { name: "Mechanic", icon: MechanicIcon },
   ];
 
-  const locations = ["Near Me", "Lahore", "Kasur", "Sheikhupura"];
-
   const themeClasses = {
     title: theme === "dark" ? "text-4xl md:text-5xl font-bold text-white" : "text-4xl md:text-5xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent",
     subtitle: theme === "dark" ? "text-slate-400 text-lg mt-3" : "text-slate-600 text-lg mt-3",
     serviceButton: theme === "dark" ? "group bg-slate-800/40 p-6 rounded-3xl border border-slate-700/60 shadow-lg shadow-black/20 text-center transition-all duration-300 hover:border-teal-500/50 hover:bg-slate-800/60" : "group bg-white/80 p-6 rounded-3xl border border-slate-300/60 shadow-lg shadow-gray-400/20 text-center transition-all duration-300 hover:border-blue-500/50 hover:bg-white/90",
     serviceText: theme === "dark" ? "font-semibold text-base text-slate-200 group-hover:text-white transition-colors" : "font-semibold text-base text-slate-700 group-hover:text-slate-800 transition-colors",
-    locationTitle: theme === "dark" ? "text-xl font-bold text-white mb-4" : "text-xl font-bold text-slate-800 mb-4",
-    locationButton: theme === "dark" ? "bg-slate-800/40 text-slate-300 text-sm font-medium py-2 px-4 rounded-full border border-slate-700/50 hover:bg-slate-700/50 transition-colors shadow-sm" : "bg-white/80 text-slate-700 text-sm font-medium py-2 px-4 rounded-full border border-slate-300/50 hover:bg-white/90 transition-colors shadow-sm",
+    locationInfo: theme === "dark" ? "text-center mb-8 p-4 bg-slate-800/30 rounded-2xl border border-slate-700/50" : "text-center mb-8 p-4 bg-white/60 rounded-2xl border border-slate-300/50",
+    locationText: theme === "dark" ? "text-slate-300 text-sm" : "text-slate-600 text-sm",
+    locationValue: theme === "dark" ? "text-white font-semibold" : "text-slate-800 font-semibold",
   };
+
+  const locationDisplay = userLocation ? locationService.formatLocationForDisplay(userLocation) : "Location not set";
 
   return (
     <motion.div key="welcome-screen" className="w-full text-center p-4 space-y-12" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
@@ -569,31 +573,37 @@ const WelcomeScreen: React.FC<{ onSelect: (query: string) => void; theme: "light
         <p className={themeClasses.subtitle}>What kind of help do you need today?</p>
       </motion.div>
 
+      {userLocation && (
+        <motion.div 
+          className={themeClasses.locationInfo}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <div className="flex items-center justify-center gap-2">
+            <LocationIcon />
+            <div>
+              <p className={themeClasses.locationText}>Searching in</p>
+              <p className={themeClasses.locationValue}>{locationDisplay}</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       <motion.div className="w-full grid grid-cols-2 md:grid-cols-3 gap-4" initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.07 } } }}>
         {services.map((service) => (
-          <motion.button key={service.name} onClick={() => onSelect(`${service.name} near me`)} className={themeClasses.serviceButton} variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} whileHover={{ y: -5, scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+          <motion.button 
+            key={service.name} 
+            onClick={() => onSelect(`${service.name} near me`)} 
+            className={themeClasses.serviceButton} 
+            variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} 
+            whileHover={{ y: -5, scale: 1.02 }} 
+            whileTap={{ scale: 0.97 }}
+          >
             <div className="flex justify-center mb-4"><service.icon /></div>
             <span className={themeClasses.serviceText}>{service.name}</span>
           </motion.button>
         ))}
-      </motion.div>
-
-      <motion.div className="w-full" initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.07, delayChildren: 0.3 } } }}>
-        <h3 className={themeClasses.locationTitle}>Or search by location</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 sm:gap-4">
-          {locations.map((location) => (
-            <motion.button
-              key={location}
-              onClick={() => onSelect(location === "Near Me" ? "services near me" : `services in ${location}`)}
-              className={themeClasses.locationButton}
-              variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } }}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              {location}
-            </motion.button>
-          ))}
-        </div>
       </motion.div>
     </motion.div>
   );
@@ -644,15 +654,136 @@ const InputForm: React.FC<{
 export default function App(): JSX.Element {
   const { theme } = useTheme();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userProfile, updateProfile } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [aiStage, setAiStage] = useState<AiStage>("idle");
   const [willShowProviders, setWillShowProviders] = useState(false);
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [showLocationModal, setShowLocationModal] = useState(false);
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   useAutoScroll(scrollContainerRef, messages.length + (aiStage !== "idle" ? 1 : 0));
   const stageTimersRef = useRef<number[]>([]);
+
+  // Initialize location on component mount
+  useEffect(() => {
+    initializeUserLocation();
+  }, [user, userProfile]);
+
+  const initializeUserLocation = async () => {
+    if (!user) {
+      return;
+    }
+
+    try {
+      // Check if user already has location in profile
+      if (userProfile?.location && locationService.isLocationRecent(userProfile.location)) {
+        console.log('Using saved location from profile:', userProfile.location);
+        setUserLocation(userProfile.location);
+        locationService.setCachedLocation(userProfile.location);
+        return;
+      }
+
+      // Check GPS permission status
+      if ('permissions' in navigator) {
+        try {
+          const permission = await navigator.permissions.query({ name: 'geolocation' });
+          
+          if (permission.state === 'granted') {
+            console.log('GPS permission granted, getting current location...');
+            await getCurrentLocationAndSave();
+          } else if (permission.state === 'prompt') {
+            // Request permission
+            await requestLocationPermission();
+          } else {
+            // Permission denied, show modal for manual input
+            console.log('GPS permission denied, showing location modal');
+            setShowLocationModal(true);
+          }
+        } catch (error) {
+          console.error('Error checking permissions:', error);
+          setShowLocationModal(true);
+        }
+      } else {
+        console.log('Permissions API not available, requesting location directly');
+        await requestLocationPermission();
+      }
+    } catch (error) {
+      console.error('Error initializing location:', error);
+      setShowLocationModal(true);
+    }
+  };
+
+  const requestLocationPermission = async () => {
+    try {
+      const location = await locationService.getCurrentLocation();
+      if (location && user) {
+        console.log('GPS location obtained:', location);
+        setUserLocation(location);
+        await locationService.saveUserLocation(user.uid, location);
+        
+        // Update the auth context profile
+        if (updateProfile) {
+          await updateProfile({ location });
+        }
+      } else {
+        console.log('GPS location not available, showing location modal');
+        setShowLocationModal(true);
+      }
+    } catch (error) {
+      console.error('Error requesting location permission:', error);
+      setShowLocationModal(true);
+    }
+  };
+
+  const getCurrentLocationAndSave = async () => {
+    try {
+      const location = await locationService.getCurrentLocation();
+      if (location && user) {
+        setUserLocation(location);
+        await locationService.saveUserLocation(user.uid, location);
+        
+        // Update the auth context profile
+        if (updateProfile) {
+          await updateProfile({ location });
+        }
+      }
+    } catch (error) {
+      console.error('Error getting current location:', error);
+      setShowLocationModal(true);
+    }
+  };
+
+  const handleManualLocationSelect = async (locationText: string) => {
+    if (!user) return;
+    
+    try {
+      const manualLocation = locationService.createManualLocation(locationText);
+      console.log('Manual location created:', manualLocation);
+      
+      setUserLocation(manualLocation);
+      await locationService.saveUserLocation(user.uid, manualLocation);
+      
+      // Update the auth context profile
+      if (updateProfile) {
+        await updateProfile({ location: manualLocation });
+      }
+      
+      setShowLocationModal(false);
+    } catch (error) {
+      console.error('Error saving manual location:', error);
+      // Could show error toast here
+    }
+  };
+
+  const formatLocationForAPI = (text: string): string => {
+    // Handle "near me" by replacing with actual user location
+    if (text.toLowerCase().includes('near me') && userLocation) {
+      return text.replace(/near me/gi, `in ${locationService.formatLocationForAPI(userLocation)}`);
+    }
+    return text;
+  };
 
   const themeClasses = {
     mainContainer: theme === "dark" ? "flex flex-col h-screen bg-slate-950 text-white overflow-hidden" : "flex flex-col h-screen bg-gradient-to-br from-slate-100 via-gray-50 to-slate-200 text-slate-800 overflow-hidden",
@@ -665,6 +796,12 @@ export default function App(): JSX.Element {
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || aiStage !== "idle") return;
+
+    // Check if location is required for the query but not available
+    if (text.toLowerCase().includes('near me') && !userLocation) {
+      setShowLocationModal(true);
+      return;
+    }
 
     const willHaveProviders = /provider|plumb|electric|service|near|help|barber|clean|mechanic|repair|fix/i.test(text);
     setWillShowProviders(willHaveProviders);
@@ -683,7 +820,10 @@ export default function App(): JSX.Element {
     stageTimersRef.current.push(window.setTimeout(() => setAiStage("organizing"), 2500));
 
     try {
-      const payload = { query: text };
+      // Format the query to include actual location for "near me" queries
+      const formattedQuery = formatLocationForAPI(text);
+      
+      const payload = { query: formattedQuery };
       console.debug("[chat] Sending payload to server:", payload);
       const resp = await fetch("https://web-production-b9056.up.railway.app/api/query", {
         method: "POST",
@@ -720,8 +860,8 @@ export default function App(): JSX.Element {
         try {
           const providersCount = providers ? providers.length : 0;
           const category = willHaveProviders ? 'service_search' : 'general';
-          await UserActivityService.recordSearch(user.uid, text, providersCount, category);
-          console.debug("[activity] Search recorded:", { query: text, providersFound: providersCount });
+          await UserActivityService.recordSearch(user.uid, formattedQuery, providersCount, category);
+          console.debug("[activity] Search recorded:", { query: formattedQuery, providersFound: providersCount });
         } catch (activityError) {
           console.warn("[activity] Failed to record search:", activityError);
           // Don't throw error, just log it as activity tracking is not critical
@@ -775,7 +915,7 @@ export default function App(): JSX.Element {
       <main ref={scrollContainerRef} className="flex-1 overflow-y-auto">
         <div className="px-4 py-8 space-y-8 max-w-4xl mx-auto">
           <AnimatePresence>
-            {messages.length === 0 && <WelcomeScreen key="welcome" onSelect={handleSendMessage} theme={theme} />}
+            {messages.length === 0 && <WelcomeScreen key="welcome" onSelect={handleSendMessage} theme={theme} userLocation={userLocation} />}
 
             {messages.map((message) => (
               <MessageBubble key={message.id} m={message} onSuggestionSelect={handleSuggestionSelect} theme={theme} />
@@ -809,6 +949,14 @@ export default function App(): JSX.Element {
           />
         </div>
       </footer>
+
+      {/* Location Modal */}
+      <LocationModal
+        isOpen={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onLocationSelect={handleManualLocationSelect}
+        theme={theme}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect } from 'react';
 import { firebaseAuth, userService } from '../firebase/auth';
 import { User } from 'firebase/auth';
 import { UserActivityService } from '../services/UserActivityService';
+import { UserLocation } from '../types/firebase';
 
 interface UserProfile {
   id: string;
@@ -13,6 +14,7 @@ interface UserProfile {
   radiusKm?: number;
   accountType?: string;
   localeType?: string;
+  location?: UserLocation;
   notifications?: {
     emailUpdates: boolean;
     providerReplies: boolean;
