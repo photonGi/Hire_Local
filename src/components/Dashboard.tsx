@@ -396,9 +396,7 @@ const Dashboard: React.FC = () => {
       button: "relative bg-gradient-to-r from-blue-600 via-blue-500 to-purple-600 rounded-2xl p-0.5 shadow-2xl group-hover:shadow-blue-500/30 transition-all duration-300 overflow-hidden group-active:scale-95"
     },
     
-    // Stats and activity
-    statsCard: "bg-white/5 border-white/10 backdrop-blur-sm border rounded-3xl p-5 hover:bg-white/10 transition-all duration-300 relative overflow-hidden group",
-    statsCardHighlighted: "bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border-yellow-500/30 backdrop-blur-sm border rounded-3xl p-5 hover:bg-white/10 transition-all duration-300 relative overflow-hidden group",
+    // Stats and activity - Clean, premium cards without progress bars
     activityCard: "bg-white/5 backdrop-blur-sm border border-white/10 rounded-3xl p-5 hover:bg-white/10 transition-all duration-300 group relative overflow-hidden",
     
     // Navigation
@@ -444,9 +442,7 @@ const lightThemeStyles = {
       searchIcon: "absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-400 via-blue-500 to-purple-600 rounded-xl text-white shadow-lg animate-pulse"
     },
     
-    // Stats and activity - High contrast white cards with colored borders
-    statsCard: "bg-white/95 border-2 border-gray-200/80 backdrop-blur-sm rounded-3xl p-5 hover:bg-white/98 hover:shadow-lg transition-all duration-300 relative overflow-hidden group shadow-md",
-    statsCardHighlighted: "bg-gradient-to-br from-amber-50/80 to-yellow-50/80 border-2 border-amber-300/80 backdrop-blur-sm rounded-3xl p-5 hover:bg-white/98 hover:shadow-lg transition-all duration-300 relative overflow-hidden group shadow-lg shadow-amber-200/50",
+    // Stats and activity - Clean, premium cards without progress bars
     activityCard: "bg-white/95 backdrop-blur-sm border-2 border-gray-200/80 rounded-3xl p-5 hover:bg-white/98 hover:shadow-lg transition-all duration-300 group relative overflow-hidden shadow-md",
     
     // Navigation - Grayish navigation to match header
@@ -706,63 +702,69 @@ const lightThemeStyles = {
 
             {/* Stats Cards */}
             <div className="px-4 py-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>Your Activity</h3>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>Your Activity</h3>
                 <button
                   onClick={refreshActivityStats}
                   disabled={refreshingActivity}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                     isDark 
-                      ? 'bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white border border-white/20' 
-                      : 'bg-slate-100/80 hover:bg-slate-200/80 text-slate-600 hover:text-slate-800 border border-slate-300/50'
-                  } ${refreshingActivity ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}
+                      ? 'bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white border border-white/20 hover:border-white/30' 
+                      : 'bg-slate-100/80 hover:bg-slate-200/80 text-slate-600 hover:text-slate-800 border border-slate-300/50 hover:border-slate-400/60'
+                  } ${refreshingActivity ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'}`}
                   aria-label="Refresh activity stats"
                 >
-                  <RefreshCw className={`w-3 h-3 ${refreshingActivity ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-4 h-4 ${refreshingActivity ? 'animate-spin' : ''}`} />
                   <span>{refreshingActivity ? 'Refreshing...' : 'Refresh'}</span>
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 {stats.map((stat, index) => {
                   const IconComponent = stat.icon;
-                  const isHighlighted = index === 1;
                   return (
                     <div 
                       key={index} 
-                      className={isHighlighted ? themeStyles.statsCardHighlighted : themeStyles.statsCard}
+                      className={`
+                        relative overflow-hidden group transition-all duration-300 hover:scale-105 active:scale-95
+                        ${isDark 
+                          ? 'bg-gradient-to-br from-white/8 to-white/4 hover:from-white/12 hover:to-white/6 border border-white/15 hover:border-white/25' 
+                          : 'bg-gradient-to-br from-white/90 to-white/80 hover:from-white/95 hover:to-white/85 border border-gray-200/60 hover:border-gray-300/80'
+                        }
+                        backdrop-blur-sm rounded-2xl p-4 shadow-lg hover:shadow-xl
+                      `}
                     >
-                      {/* Background pattern */}
-                      <div className="absolute inset-0 opacity-5">
-                        <div className={`w-full h-full ${isDark ? 'bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1)_1px,transparent_1px)]' : 'bg-[radial-gradient(circle_at_50%_50%,rgba(0,0,0,0.1)_1px,transparent_1px)]'} bg-[length:20px_20px]`}></div>
+                      {/* Subtle background glow */}
+                      <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl bg-gradient-to-br ${stat.color}`} style={{opacity: '0.03'}}></div>
+                      
+                      {/* Icon with premium styling */}
+                      <div className="relative mb-3 flex justify-center">
+                        <div className={`
+                          w-12 h-12 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110
+                          bg-gradient-to-br ${stat.color}
+                        `}>
+                          <IconComponent className="w-6 h-6 text-white drop-shadow-sm" />
+                        </div>
                       </div>
                       
-                      <div className="relative">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className={`w-10 h-10 bg-gradient-to-br ${stat.color} rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                            <IconComponent className="w-5 h-5 text-white" />
-                          </div>
-                          <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            isHighlighted 
-                              ? (isDark ? 'bg-yellow-500/20 text-yellow-300' : 'bg-amber-200/60 text-amber-700') 
-                              : (isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-200/60 text-green-700')
-                          }`}>
-                            {stat.change}
-                          </div>
-                        </div>
-                        <h4 className={`text-3xl font-bold mb-1 ${
-                          isHighlighted 
-                            ? (isDark ? 'text-yellow-300' : 'text-amber-700') 
-                            : (isDark ? 'text-white' : 'text-gray-800')
-                        }`}>{stat.value}</h4>
-                        <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-600'} font-medium`}>{stat.label}</p>
-                        
-                        {/* Progress bar */}
-                        <div className={`mt-3 w-full h-1.5 ${isDark ? 'bg-white/10' : 'bg-slate-300/50'} rounded-full overflow-hidden`}>
-                          <div 
-                            className={`h-full bg-gradient-to-r ${stat.color} rounded-full transition-all duration-1000`}
-                            style={{width: `${60 + index * 10}%`}}
-                          ></div>
-                        </div>
+                      {/* Value with premium typography */}
+                      <div className="text-center relative">
+                        <h4 className={`
+                          text-2xl font-bold mb-1 transition-colors duration-300
+                          ${isDark ? 'text-white group-hover:text-gray-50' : 'text-gray-900 group-hover:text-gray-800'}
+                        `}>
+                          {stat.value}
+                        </h4>
+                        <p className={`
+                          text-xs font-medium transition-colors duration-300
+                          ${isDark ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-600 group-hover:text-gray-700'}
+                        `}>
+                          {stat.label}
+                        </p>
+                      </div>
+
+                      {/* Premium shine effect on hover */}
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                        <div className={`absolute inset-0 rounded-2xl ${isDark ? 'bg-gradient-to-r from-transparent via-white/5 to-transparent' : 'bg-gradient-to-r from-transparent via-white/40 to-transparent'} transform -skew-x-12 translate-x-full group-hover:-translate-x-full transition-transform duration-700 ease-out`}></div>
                       </div>
                     </div>
                   );
