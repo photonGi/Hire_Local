@@ -1,22 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { Firestore } from 'firebase/firestore';
 import { 
   Search, 
   MessageCircle, 
-  History, 
   User, 
   Bell,
-  MapPin,
-  Clock,
   Heart,
   Home,
   ChevronRight,
   Calendar,
   Award,
-  DollarSign,
   Moon,
-  Sun,
-  LogOut
+  Sun
 } from 'lucide-react';
 import PageTransition from './shared/PageTransition';
 import { useTheme } from '../theme/useTheme';
@@ -25,22 +21,37 @@ import { useAuth } from '../contexts/AuthContextHooks';
 const Dashboard: React.FC = () => {
   // User profile state
   const [profile, setProfile] = useState<any | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
+  const [imageLoadError, setImageLoadError] = useState(false);
   const { user } = useAuth();
   React.useEffect(() => {
     if (!user) return;
-    setProfileLoading(true);
-    import('../firebase/config').then(({ db }) => {
-      import('firebase/firestore').then(({ doc, getDoc }) => {
+    
+    const fetchProfile = async () => {
+      try {
+        const { db } = await import('../firebase/config') as { db: Firestore };
+        const { doc, getDoc } = await import('firebase/firestore');
         const ref = doc(db, 'users', user.uid);
-        getDoc(ref).then((snap) => {
-          if (snap.exists()) setProfile(snap.data());
-          else setProfile(null);
-          setProfileLoading(false);
-        }).catch(() => setProfileLoading(false));
-      });
-    });
+        const snap = await getDoc(ref);
+        
+        if (snap.exists()) {
+          setProfile(snap.data());
+          setImageLoadError(false); // Reset image error when profile loads
+        } else {
+          setProfile(null);
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        setProfile(null);
+      }
+    };
+
+    fetchProfile();
   }, [user]);
+
+  // Reset image error when profile changes
+  React.useEffect(() => {
+    setImageLoadError(false);
+  }, [profile?.photoURL]);
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { signOut } = useAuth();
@@ -264,43 +275,9 @@ const Dashboard: React.FC = () => {
     };
   }, []);
 
-  const recentActivity = [
-    { 
-      id: 1, 
-      type: 'search', 
-      title: 'Found 3 plumbers near you', 
-      subtitle: 'Leaky kitchen faucet repair',
-      time: '2 hours ago', 
-      status: 'completed',
-      icon: '🔧',
-      color: 'text-blue-500'
-    },
-    { 
-      id: 2, 
-      type: 'contact', 
-      title: 'Contacted Mike\'s Cleaning Service', 
-      subtitle: 'Deep house cleaning',
-      time: '1 day ago', 
-      status: 'replied',
-      icon: '🧽',
-      color: 'text-green-500'
-    },
-    { 
-      id: 3, 
-      type: 'save', 
-      title: 'Saved ElectroFix Solutions', 
-      subtitle: 'Light fixture installation',
-      time: '3 days ago', 
-      status: 'saved',
-      icon: '⚡',
-      color: 'text-yellow-500'
-    }
-  ];
-
   const stats = [
     { label: 'Total Searches', value: '24', icon: Search, color: 'from-blue-500 to-cyan-500', change: '+12%' },
     { label: 'Providers Found', value: '142', icon: Award, color: 'from-purple-500 to-pink-500', change: '+8%' },
-    { label: 'Money Saved', value: '$340', icon: DollarSign, color: 'from-green-500 to-emerald-500', change: '+15%' },
     { label: 'This Month', value: '8', icon: Calendar, color: 'from-orange-500 to-red-500', change: '+25%' }
   ];
 
@@ -432,14 +409,23 @@ const lightThemeStyles = {
                 <div className="flex items-center justify-between">
                   {/* Left cluster: User Info from Firebase */}
                   <div className="flex items-center gap-4 flex-1 min-w-0 pr-4">
-                    {/* Avatar or fallback */}
-                    {profile && profile.photoURL ? (
+                    {/* Avatar with fallback */}
+                    {profile && profile.photoURL && !imageLoadError ? (
                       <img
                         src={profile.photoURL}
                         alt="Profile"
                         className="w-11 h-11 rounded-full border-2 border-blue-400 object-cover shadow-md"
+                        onError={() => setImageLoadError(true)}
+                        onLoad={() => setImageLoadError(false)}
                       />
-                    ) : null}
+                    ) : (
+                      /* Default avatar fallback */
+                      <div 
+                        className={`w-11 h-11 rounded-full border-2 ${isDark ? 'border-blue-400 bg-gradient-to-br from-blue-500/30 to-purple-600/30' : 'border-blue-400 bg-gradient-to-br from-blue-400/60 to-indigo-500/60'} flex items-center justify-center shadow-md`}
+                      >
+                        <User className={`w-6 h-6 ${isDark ? 'text-blue-200' : 'text-white'}`} />
+                      </div>
+                    )}
                     <div className="flex flex-col flex-1 min-w-0">
                       {/* Name and greeting */}
                       {profile && profile.displayName ? (
@@ -498,8 +484,7 @@ const lightThemeStyles = {
                           onClick={(e) => e.stopPropagation()}>
                           {[
                             {label:'Profile', action:()=>navigate('/profile')},
-                            {label:'History', action:()=>navigate('/history')},
-                            {label:'Saved Providers', action:()=>{}},
+                            {label:'Saved Providers', action:()=>navigate('/saved')},
                             {label:'Logout', action: handleLogout}
                           ].map(item => (
                             <button key={item.label} onClick={()=>{item.action(); setUserMenuOpen(false);}} className={`w-full text-left px-3 py-2 rounded-xl text-sm ${isDark ? 'text-blue-100 hover:bg-white/10' : 'text-slate-700 hover:bg-slate-100'} transition flex items-center justify-between group`}>
@@ -649,8 +634,8 @@ const lightThemeStyles = {
             {/* Stats Cards */}
             <div className="px-4 py-4">
               <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-800'} mb-4`}>Your Activity</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {stats.slice(0, 4).map((stat, index) => {
+              <div className="grid grid-cols-3 gap-4">
+                {stats.map((stat, index) => {
                   const IconComponent = stat.icon;
                   const isHighlighted = index === 1;
                   return (
@@ -697,83 +682,11 @@ const lightThemeStyles = {
               </div>
             </div>
 
-            {/* Recent Activity */}
-            <div className="px-4 py-4">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>Recent Activity</h3>
-                <button onClick={() => navigate('/history')} className={`${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'} text-sm font-medium transition-colors flex items-center space-x-1`}>
-                  <span>View All</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                {recentActivity.map((activity) => (
-                  <div key={activity.id} className={themeStyles.activityCard}>
-                    {/* Activity type gradient overlay */}
-                    <div className={`absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-3xl ${
-                      activity.type === 'search' 
-                        ? (isDark ? 'bg-gradient-to-r from-blue-500 to-cyan-500' : 'bg-gradient-to-r from-blue-400 to-cyan-400')
-                        : activity.type === 'contact' 
-                        ? (isDark ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-green-400 to-emerald-400')
-                        : (isDark ? 'bg-gradient-to-r from-purple-500 to-pink-500' : 'bg-gradient-to-r from-purple-400 to-pink-400')
-                    }`}></div>
-                    
-                    <div className="relative flex items-center space-x-4">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 shadow-lg backdrop-blur-sm ${
-                        activity.type === 'search' 
-                          ? (isDark ? 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border-blue-500/30' : 'bg-gradient-to-br from-blue-300/40 to-cyan-300/40 border-blue-400/50')
-                          : activity.type === 'contact' 
-                          ? (isDark ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-green-500/30' : 'bg-gradient-to-br from-green-300/40 to-emerald-300/40 border-green-400/50')
-                          : (isDark ? 'bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-purple-500/30' : 'bg-gradient-to-br from-purple-300/40 to-pink-300/40 border-purple-400/50')
-                      } border`}>
-                        {activity.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className={`font-semibold text-sm transition-colors ${isDark ? 'text-white group-hover:text-blue-300' : 'text-gray-800 group-hover:text-blue-600'}`}>{activity.title}</h4>
-                        <p className={`text-xs mt-1 line-clamp-1 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>{activity.subtitle}</p>
-                        <div className="flex items-center space-x-3 mt-2">
-                          <div className="flex items-center space-x-1">
-                            <Clock className={`w-3 h-3 ${isDark ? 'text-gray-500' : 'text-slate-500'}`} />
-                            <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>{activity.time}</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <span className={`inline-block w-2 h-2 rounded-full ${
-                              activity.status === 'completed' ? 'bg-green-500' : 
-                              activity.status === 'replied' ? 'bg-blue-500' : 'bg-gray-500'
-                            }`}></span>
-                            <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-slate-500'} capitalize`}>{activity.status}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <ChevronRight className={`w-5 h-5 transition-colors group-hover:translate-x-1 duration-300 ${isDark ? 'text-gray-400 group-hover:text-blue-400' : 'text-slate-400 group-hover:text-blue-600'}`} />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Quick Actions */}
             <div className="px-4 py-4">
               <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-800'} mb-6`}>Quick Actions</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => navigate('/history')} className={`${isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white/60 border-slate-300/50 hover:bg-white/80'} backdrop-blur-sm border rounded-3xl p-6 transition-all duration-300 active:scale-95 group relative overflow-hidden shadow-lg`}>
-                  <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl ${isDark ? 'bg-gradient-to-br from-purple-500/10 to-pink-500/10' : 'bg-gradient-to-br from-purple-300/20 to-pink-300/20'}`}></div>
-                  <div className="relative">
-                    <div className={`w-14 h-14 ${isDark ? 'bg-gradient-to-br from-purple-500 to-pink-500' : 'bg-gradient-to-br from-purple-600 to-pink-600'} rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-                      <History className="w-7 h-7 text-white" />
-                    </div>
-                    <h4 className={`font-semibold text-sm mb-1 transition-colors ${isDark ? 'text-white group-hover:text-purple-300' : 'text-gray-800 group-hover:text-purple-600'}`}>Chat History</h4>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>View conversations</p>
-                    <div className="mt-3 flex justify-center">
-                      <div className={`w-6 h-1 ${isDark ? 'bg-purple-500/30' : 'bg-purple-400/50'} rounded-full`}></div>
-                    </div>
-                  </div>
-                </button>
-                
-                <button onClick={()=>navigate('/saved')} className={`${isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white/60 border-slate-300/50 hover:bg-white/80'} backdrop-blur-sm border rounded-3xl p-6 transition-all duration-300 active:scale-95 group relative overflow-hidden shadow-lg`}>
+              <div className="flex justify-center">
+                <button onClick={()=>navigate('/saved')} className={`${isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white/60 border-slate-300/50 hover:bg-white/80'} backdrop-blur-sm border rounded-3xl p-6 transition-all duration-300 active:scale-95 group relative overflow-hidden shadow-lg w-48`}>
                   <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl ${isDark ? 'bg-gradient-to-br from-red-500/10 to-orange-500/10' : 'bg-gradient-to-br from-red-300/20 to-orange-300/20'}`}></div>
                   <div className="relative">
                     <div className={`w-14 h-14 ${isDark ? 'bg-gradient-to-br from-red-500 to-orange-500' : 'bg-gradient-to-br from-red-600 to-orange-600'} rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
@@ -801,11 +714,6 @@ const lightThemeStyles = {
               <button onClick={() => navigate('/chat')} className={themeStyles.navButton} aria-label="AI Search">
                 <Search className={`w-6 h-6 transition-colors ${isDark ? 'text-gray-400 group-hover:text-white' : 'text-slate-500 group-hover:text-gray-800'}`} />
                 <span className={`text-xs transition-colors ${isDark ? 'text-gray-400 group-hover:text-white' : 'text-slate-500 group-hover:text-gray-800'}`}>Search</span>
-              </button>
-              
-              <button onClick={() => navigate('/history')} className={themeStyles.navButton}>
-                <History className={`w-6 h-6 transition-colors ${isDark ? 'text-gray-400 group-hover:text-white' : 'text-slate-500 group-hover:text-gray-800'}`} />
-                <span className={`text-xs transition-colors ${isDark ? 'text-gray-400 group-hover:text-white' : 'text-slate-500 group-hover:text-gray-800'}`}>History</span>
               </button>
               
               <button onClick={()=>navigate('/saved')} className={themeStyles.navButton}>

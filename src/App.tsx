@@ -13,7 +13,6 @@ import ComingSoonScreen from './components/ComingSoonScreen'
 import { AdminLogin } from './components/admin/AdminLogin'
 import AdminDashboard from './components/admin/AdminDashboard'
 import  AnalyticsDashboard  from './components/admin/AnalyticsDashboard'
-import EnvironmentDebug from './components/EnvironmentDebug'
 
 import { ThemeProvider } from './theme/ThemeContext'
 import { AuthProvider } from './contexts/AuthContext'
@@ -26,7 +25,6 @@ function App() {
       <AuthProvider>
         <Router>
           <div className="min-h-screen bg-background-light dark:bg-background-dark transition-colors duration-300">
-            <EnvironmentDebug />
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<RedirectIfAuthenticated><LandingScreen /></RedirectIfAuthenticated>} />
