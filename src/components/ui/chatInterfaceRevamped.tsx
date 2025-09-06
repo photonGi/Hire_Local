@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../theme/useTheme";
 import { useAuth } from "../../contexts/AuthContextHooks";
 import { BusinessService } from "../../services/BusinessService";
+import { UserActivityService } from "../../services/UserActivityService";
 import type { Business } from "../../types/firebase";
 
 /* ------------------- Types ------------------- */
@@ -643,6 +644,7 @@ const InputForm: React.FC<{
 export default function App(): JSX.Element {
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [aiStage, setAiStage] = useState<AiStage>("idle");
@@ -712,6 +714,19 @@ export default function App(): JSX.Element {
       };
 
       setMessages((prev) => [...prev, aiMessage]);
+
+      // Record search activity if user is logged in
+      if (user && user.uid) {
+        try {
+          const providersCount = providers ? providers.length : 0;
+          const category = willHaveProviders ? 'service_search' : 'general';
+          await UserActivityService.recordSearch(user.uid, text, providersCount, category);
+          console.debug("[activity] Search recorded:", { query: text, providersFound: providersCount });
+        } catch (activityError) {
+          console.warn("[activity] Failed to record search:", activityError);
+          // Don't throw error, just log it as activity tracking is not critical
+        }
+      }
     } catch (err) {
       console.error(err);
       const aiMessage: Message = {

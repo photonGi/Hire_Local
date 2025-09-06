@@ -5,7 +5,6 @@ import {
   Search, 
   MessageCircle, 
   User, 
-  Bell,
   Heart,
   Home,
   ChevronRight,
@@ -17,11 +16,14 @@ import {
 import PageTransition from './shared/PageTransition';
 import { useTheme } from '../theme/useTheme';
 import { useAuth } from '../contexts/AuthContextHooks';
+import { UserActivityService } from '../services/UserActivityService';
+import type { ActivityStats } from '../services/UserActivityService';
 
 const Dashboard: React.FC = () => {
   // User profile state
   const [profile, setProfile] = useState<any | null>(null);
   const [imageLoadError, setImageLoadError] = useState(false);
+  const [activityStats, setActivityStats] = useState<ActivityStats | null>(null);
   const { user } = useAuth();
   React.useEffect(() => {
     if (!user) return;
@@ -52,6 +54,32 @@ const Dashboard: React.FC = () => {
   React.useEffect(() => {
     setImageLoadError(false);
   }, [profile?.photoURL]);
+
+  // Load user activity stats
+  React.useEffect(() => {
+    if (!user) return;
+
+    const fetchActivityStats = async () => {
+      try {
+        const stats = await UserActivityService.getActivityStats(user.uid);
+        setActivityStats(stats);
+      } catch (error) {
+        console.error('Error fetching activity stats:', error);
+        // Set default stats on error
+        setActivityStats({
+          totalSearches: 0,
+          totalProvidersFound: 0,
+          thisMonthSearches: 0,
+          searchesChange: '+0%',
+          providersChange: '+0%',
+          monthlyChange: '+0%'
+        });
+      }
+    };
+
+    fetchActivityStats();
+  }, [user]);
+
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { signOut } = useAuth();
@@ -275,10 +303,33 @@ const Dashboard: React.FC = () => {
     };
   }, []);
 
-  const stats = [
-    { label: 'Total Searches', value: '24', icon: Search, color: 'from-blue-500 to-cyan-500', change: '+12%' },
-    { label: 'Providers Found', value: '142', icon: Award, color: 'from-purple-500 to-pink-500', change: '+8%' },
-    { label: 'This Month', value: '8', icon: Calendar, color: 'from-orange-500 to-red-500', change: '+25%' }
+  const stats = activityStats ? [
+    { 
+      label: 'Total Searches', 
+      value: activityStats.totalSearches.toString(), 
+      icon: Search, 
+      color: 'from-blue-500 to-cyan-500', 
+      change: activityStats.searchesChange 
+    },
+    { 
+      label: 'Providers Found', 
+      value: activityStats.totalProvidersFound.toString(), 
+      icon: Award, 
+      color: 'from-purple-500 to-pink-500', 
+      change: activityStats.providersChange 
+    },
+    { 
+      label: 'This Month', 
+      value: activityStats.thisMonthSearches.toString(), 
+      icon: Calendar, 
+      color: 'from-orange-500 to-red-500', 
+      change: activityStats.monthlyChange 
+    }
+  ] : [
+    // Default/loading stats
+    { label: 'Total Searches', value: '0', icon: Search, color: 'from-blue-500 to-cyan-500', change: '+0%' },
+    { label: 'Providers Found', value: '0', icon: Award, color: 'from-purple-500 to-pink-500', change: '+0%' },
+    { label: 'This Month', value: '0', icon: Calendar, color: 'from-orange-500 to-red-500', change: '+0%' }
   ];
 
   // ===== THEME-SPECIFIC STYLES =====
@@ -459,10 +510,6 @@ const lightThemeStyles = {
                         <Moon className="w-4 h-4" />
                       )}
                     </button>
-                    <button className={themeStyles.header.button}>
-                      <Bell className="w-4 h-4" />
-                      <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full ${isDark ? 'bg-gradient-to-br from-rose-500 to-pink-500' : 'bg-gradient-to-br from-red-500 to-rose-500'} text-[10px] font-bold flex items-center justify-center shadow text-white`}>3</span>
-                    </button>
                     <div 
                       className="relative"
                       onMouseEnter={handleMouseEnter}
@@ -506,16 +553,12 @@ const lightThemeStyles = {
             {/* Welcome Card */}
             <div id="ai-search-card" className="px-4 py-6">
               <div className={themeStyles.welcomeCard}>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center">
                   <div>
                     <h3 className={`${isDark ? 'text-white' : 'text-gray-800'} font-bold text-lg mb-1`}>
                       Welcome back{profile && profile.displayName ? `, ${profile.displayName.split(' ')[0]}` : ''}! 👋
                     </h3>
                     <p className={`${isDark ? 'text-gray-400' : 'text-slate-600'} text-sm`}>Ready to find your next service provider?</p>
-                  </div>
-                  <div className="text-right">
-                    <div className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>24</div>
-                    <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>searches</div>
                   </div>
                 </div>
               </div>

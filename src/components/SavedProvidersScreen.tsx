@@ -24,7 +24,7 @@ interface ButtonProps {
   size?: 'sm' | 'md' | 'lg';
   variant?: 'primary' | 'subtle' | 'whatsapp' | 'danger';
   leftIcon?: React.ReactNode;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
   loading?: boolean;
   [key: string]: any;
@@ -32,6 +32,9 @@ interface ButtonProps {
 
 // Mock Button component
 const Button: React.FC<ButtonProps> = ({ onClick, size = 'md', variant = 'primary', leftIcon, children, className = '', loading = false, ...props }) => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  
   const sizeClasses = {
     sm: 'px-3 py-1.5 text-xs',
     md: 'px-4 py-2 text-sm',
@@ -40,7 +43,9 @@ const Button: React.FC<ButtonProps> = ({ onClick, size = 'md', variant = 'primar
   
   const variantClasses = {
     primary: 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-500',
-    subtle: 'bg-white/10 hover:bg-white/20 text-white border border-white/20',
+    subtle: isDark 
+      ? 'bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/50 hover:border-slate-600/60' 
+      : 'bg-white/80 hover:bg-white/90 text-slate-700 hover:text-slate-800 border border-slate-300/60 hover:border-slate-400/70 shadow-sm hover:shadow-md',
     whatsapp: 'bg-green-600 hover:bg-green-700 text-white border border-green-500',
     danger: 'bg-red-600 hover:bg-red-700 text-white border border-red-500'
   };
@@ -230,36 +235,38 @@ const SavedProvidersScreen = () => {
 
       <div className="relative z-10 flex flex-col min-h-screen">
         {/* Fixed Header */}
-        <div className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${themeClasses.header} px-4 py-3 sm:py-4 flex items-center justify-between`}>
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={() => navigate(-1)}
-              size="sm"
-              variant="subtle"
-              className="!h-9 !w-9 sm:!h-10 sm:!w-10 !px-0 rounded-xl"
-              leftIcon={<ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />}
-              aria-label="Back"
-            />
-            <div>
-              <h1 className={`text-base sm:text-lg md:text-xl font-bold tracking-wide transition-all duration-300 ${themeClasses.title}`}>
-                Saved Providers
-              </h1>
-              <p className={`text-[10px] sm:text-[11px] uppercase tracking-[0.25em] font-medium transition-all duration-300 ${themeClasses.subtitle}`}>
-                {providers.length} Saved
-              </p>
+        <div className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${themeClasses.header} px-4 py-3 sm:py-4`}>
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <Button
+                onClick={() => navigate(-1)}
+                size="sm"
+                variant="subtle"
+                className="flex-shrink-0 !h-9 !w-9 sm:!h-10 sm:!w-10 !px-0 !py-0 rounded-xl !border-2 shadow-sm"
+                leftIcon={<ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />}
+                aria-label="Back to Dashboard"
+              />
+              <div className="flex-1 min-w-0">
+                <h1 className={`text-base sm:text-lg md:text-xl font-bold tracking-wide transition-all duration-300 ${themeClasses.title} truncate`}>
+                  Saved Providers
+                </h1>
+                <p className={`text-[10px] sm:text-[11px] uppercase tracking-[0.25em] font-medium transition-all duration-300 ${themeClasses.subtitle}`}>
+                  {providers.length} Saved
+                </p>
+              </div>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Button 
-              size="md" 
-              variant="primary" 
-              onClick={() => setShowFilters(f => !f)} 
-              leftIcon={<Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4" />} 
-              className="text-xs sm:text-sm"
-            >
-              {showFilters ? 'Hide' : 'Filter'}
-            </Button>
+            
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <Button 
+                size="md" 
+                variant="primary" 
+                onClick={() => setShowFilters(f => !f)} 
+                leftIcon={<Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4" />} 
+                className="text-xs sm:text-sm"
+              >
+                {showFilters ? 'Hide' : 'Filter'}
+              </Button>
+            </div>
           </div>
         </div>
 
