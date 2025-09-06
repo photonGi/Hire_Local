@@ -179,7 +179,7 @@ const HowItWorksScreen: React.FC = () => {
       }`}></div>
 
       {/* Navigation */}
-      <Navbar currentPage="how-it-works" />
+      <Navbar currentPage="how-it-works" showCreateAccount={true} />
 
       {/* Main Content */}
       <div className="relative z-40 max-w-7xl mx-auto px-6 lg:px-8 pt-24 sm:pt-28 md:pt-32 pb-16">

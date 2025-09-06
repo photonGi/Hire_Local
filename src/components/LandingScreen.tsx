@@ -36,20 +36,39 @@ const LandingScreen: React.FC = () => {
         currentPage="home"
       />
 
-      {/* Admin Test Button */}
-      <div className="fixed top-6 right-6 z-50">
-        <button 
-          onClick={() => navigate('/admin')}
-          className="group relative overflow-hidden bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-400 hover:to-pink-500 text-white px-4 py-2 rounded-xl font-semibold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          <div className="relative flex items-center space-x-2">
-            <span className="text-sm">Admin</span>
-            <div className="px-1.5 py-0.5 bg-white/20 backdrop-blur-sm rounded-md text-[10px] font-bold uppercase tracking-wider border border-white/30">
-              TEST
-            </div>
+      {/* Admin Test Button - Slide-out Drawer */}
+      <div className="fixed top-1/2 left-0 z-40 transform -translate-y-1/2 group">
+        {/* Slide-out Tab with Arrow */}
+        <div className="relative">
+          {/* Hidden Admin Panel */}
+          <div className="absolute left-0 top-1/2 transform -translate-y-1/2 translate-x-0 group-hover:translate-x-2 transition-all duration-300 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto">
+            <button 
+              onClick={() => navigate('/admin')}
+              className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-400 hover:to-pink-500 text-white px-4 py-3 rounded-r-xl font-semibold shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex items-center space-x-2">
+                <span className="text-sm font-bold">Admin</span>
+                <div className="px-2 py-1 bg-white/20 backdrop-blur-sm rounded-md text-[10px] font-bold uppercase tracking-wider border border-white/30">
+                  TEST
+                </div>
+              </div>
+            </button>
           </div>
-        </button>
+          
+          {/* Arrow Tab Indicator */}
+          <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white p-2 rounded-r-full shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300 cursor-pointer relative overflow-hidden group-hover:from-red-400 group-hover:to-pink-500">
+            <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <svg 
+              className="w-4 h-4 relative z-10 transform group-hover:translate-x-1 transition-transform duration-300" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
       </div>
 
       {/* Floating Service Provider Cards */}
@@ -79,7 +98,7 @@ const LandingScreen: React.FC = () => {
       ))}
 
       {/* Main Content - Reduced top padding and spacing */}
-      <div className="relative z-40 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 md:pt-28 pb-16">
+      <div className="relative z-40 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 md:pt-32 pb-16">
         <div className="text-center">
           <div className="inline-flex items-center space-x-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-full px-6 py-2 mb-6">
             

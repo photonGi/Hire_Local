@@ -10,6 +10,7 @@ import UserProfileScreen from './components/UserProfileScreen'
 import SavedProvidersScreen from './components/SavedProvidersScreen'
 import HowItWorksScreen from './components/HowItWorksScreen'
 import ComingSoonScreen from './components/ComingSoonScreen'
+import ContactUsScreen from './components/ContactUsScreen'
 import { AdminLogin } from './components/admin/AdminLogin'
 import AdminDashboard from './components/admin/AdminDashboard'
 import  AnalyticsDashboard  from './components/admin/AnalyticsDashboard'
@@ -32,6 +33,7 @@ function App() {
               <Route path="/login" element={<RedirectIfAuthenticated><AuthScreen /></RedirectIfAuthenticated>} />
               <Route path="/signup" element={<RedirectIfAuthenticated><AuthScreen /></RedirectIfAuthenticated>} />
               <Route path="/how-it-works" element={<HowItWorksScreen />} />
+              <Route path="/contact" element={<ContactUsScreen />} />
               
               {/* User Dashboard Routes - Protected */}
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
