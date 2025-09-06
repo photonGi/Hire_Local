@@ -16,12 +16,11 @@ const UserProfileScreen: React.FC = () => {
   const [pwdSubmitting, setPwdSubmitting] = useState(false);
   const [pwdError, setPwdError] = useState<string | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [selectedLocaleType, setSelectedLocaleType] = useState<'Urban'|'Suburban'|'Rural'>('Urban');
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [toasts, setToasts] = useState<Array<{ id: string; title: string; type?: 'success' | 'error' | 'info'; desc?: string }>>([]);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({ personal: true, location: false, notifications: true, privacy: false, accounts: true });
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({ personal: true, location: false, accounts: true });
   
   // Initialize profile from Firebase user data
   const [profile, setProfile] = useState({
@@ -34,16 +33,12 @@ const UserProfileScreen: React.FC = () => {
     radiusKm: userProfile?.radiusKm || 25
   });
   
-  const initialNotif = userProfile?.notifications || { emailUpdates: true, providerReplies: true, recommendations: true, marketing: false, security: true };
-  const initialPrivacy = userProfile?.privacy || { showProfilePublic: false, shareActivity: false, aiPersonalization: true, dataCollection: true };
   const initialAccounts = userProfile?.connectedAccounts || { google: false, facebook: false };
   
-  const [notifSettings, setNotifSettings] = useState(initialNotif);
-  const [privacySettings, setPrivacySettings] = useState(initialPrivacy);
   const [connectedAccounts, setConnectedAccounts] = useState(initialAccounts);
 
   // Dirty tracking state snapshots
-  const [baseline, setBaseline] = useState({ profile, notifSettings, privacySettings, connectedAccounts, selectedLocaleType });
+  const [baseline, setBaseline] = useState({ profile, connectedAccounts });
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -65,8 +60,6 @@ const UserProfileScreen: React.FC = () => {
         radiusKm: userProfile.radiusKm || 25
       });
       
-      setNotifSettings(userProfile.notifications || { emailUpdates: true, providerReplies: true, recommendations: true, marketing: false, security: true });
-      setPrivacySettings(userProfile.privacy || { showProfilePublic: false, shareActivity: false, aiPersonalization: true, dataCollection: true });
       setConnectedAccounts(userProfile.connectedAccounts || { google: false, facebook: false });
     }
   }, [userProfile, user]);
@@ -214,11 +207,6 @@ const UserProfileScreen: React.FC = () => {
     }
     fn();
   };
-
-  const toggleSetting = (group: 'notif' | 'privacy', key: string) => guardEdit(() => {
-    if (group === 'notif') setNotifSettings(s => ({ ...s, [key]: !s[key as keyof typeof s] }));
-    else setPrivacySettings(s => ({ ...s, [key]: !s[key as keyof typeof s] }));
-  });
   
   const toggleAccount = (key: 'google' | 'facebook') => guardEdit(() => {
     pushToast(`${connectedAccounts[key] ? 'Disconnecting' : 'Connecting'} ${key === 'google' ? 'Google' : 'Facebook'}...`, 'info');
@@ -229,19 +217,13 @@ const UserProfileScreen: React.FC = () => {
   });
 
   const hasProfileChanged = useMemo(() => JSON.stringify(profile) !== JSON.stringify(baseline.profile), [profile, baseline.profile]);
-  const hasNotifChanged = useMemo(() => JSON.stringify(notifSettings) !== JSON.stringify(baseline.notifSettings), [notifSettings, baseline.notifSettings]);
-  const hasPrivacyChanged = useMemo(() => JSON.stringify(privacySettings) !== JSON.stringify(baseline.privacySettings), [privacySettings, baseline.privacySettings]);
   const hasAccountsChanged = useMemo(() => JSON.stringify(connectedAccounts) !== JSON.stringify(baseline.connectedAccounts), [connectedAccounts, baseline.connectedAccounts]);
-  const hasLocaleTypeChanged = useMemo(() => selectedLocaleType !== baseline.selectedLocaleType, [selectedLocaleType, baseline.selectedLocaleType]);
   const dirtySections = useMemo(() => {
     const arr:string[] = [];
     if (hasProfileChanged) arr.push('Profile');
-    if (hasNotifChanged) arr.push('Notifications');
-    if (hasPrivacyChanged) arr.push('Privacy');
     if (hasAccountsChanged) arr.push('Accounts');
-    if (hasLocaleTypeChanged) arr.push('Location');
     return arr;
-  }, [hasProfileChanged, hasNotifChanged, hasPrivacyChanged, hasAccountsChanged, hasLocaleTypeChanged]);
+  }, [hasProfileChanged, hasAccountsChanged]);
   const isDirty = dirtySections.length > 0;
 
   const simulateNetwork = (ms = 900) => new Promise(res => setTimeout(res, ms));
@@ -257,19 +239,15 @@ const UserProfileScreen: React.FC = () => {
         displayName: profile.name,
         phone: profile.phone,
         address: profile.address,
-        radiusKm: profile.radiusKm,
         accountType: profile.accountType,
-        notifications: notifSettings,
-        privacy: privacySettings,
         connectedAccounts: connectedAccounts,
-        localeType: selectedLocaleType,
         updatedAt: new Date()
       };
       
       // Update the profile in Firebase
       await updateProfile(profileData);
       
-      setBaseline({ profile, notifSettings, privacySettings, connectedAccounts, selectedLocaleType });
+      setBaseline({ profile, connectedAccounts });
       setSaving(false);
       setEditing(false);
       setLastSaved(new Date());
@@ -283,10 +261,7 @@ const UserProfileScreen: React.FC = () => {
   
   const handleCancel = () => {
     setProfile(baseline.profile);
-    setNotifSettings(baseline.notifSettings);
-    setPrivacySettings(baseline.privacySettings);
     setConnectedAccounts(baseline.connectedAccounts);
-    setSelectedLocaleType(baseline.selectedLocaleType);
     setEditing(false);
     pushToast('Reverted', 'info', 'All unsaved changes discarded');
   };
@@ -473,17 +448,7 @@ const UserProfileScreen: React.FC = () => {
                     <div className="flex items-center gap-2"><Mail className="w-4 h-4" /> {profile.email}</div>
                     <div className="flex items-center gap-2"><Phone className="w-4 h-4" /> {profile.phone}</div>
                   </div>
-                  <div className="mt-5 grid grid-cols-3 gap-4">
-                    {[{label:'Total Searches', value:24},{label:'Providers Contacted', value:15},{label:'Saved Providers', value:42}].map(m => (
-                      <div key={m.label} className="text-center">
-                        <div className={`text-xl sm:text-2xl font-bold ${theme === 'dark' 
-                          ? 'bg-gradient-to-br from-white via-blue-100 to-white bg-clip-text text-transparent' 
-                          : 'metallic-text'
-                        }`}>{m.value}</div>
-                        <div className={`text-[11px] uppercase tracking-wide mt-1 ${theme === 'dark' ? 'text-blue-200/60' : 'text-slate-600'}`}>{m.label}</div>
-                      </div>
-                    ))}
-                  </div>
+
                   <div className="mt-6 flex flex-wrap gap-3">
                     <button onClick={() => setEditing(true)} className={`px-4 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40 transition ${theme === 'dark' 
                       ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-pink-500 text-white' 
@@ -564,98 +529,19 @@ const UserProfileScreen: React.FC = () => {
                 )}
                 
                 <div className="space-y-2">
-                  <label className={`text-xs font-medium tracking-wide ${theme === 'dark' ? 'text-blue-200/60' : 'text-slate-600'}`}>Primary Address (Optional)</label>
+                  <label className={`text-xs font-medium tracking-wide ${theme === 'dark' ? 'text-blue-200/60' : 'text-slate-600'}`}>Update Location</label>
                   <input disabled={!editing} value={profile.address} onChange={e=>setProfile(p=>({...p, address:e.target.value}))} 
-                    placeholder="Enter additional address details..."
+                    placeholder="Enter new location..."
                     className={`w-full rounded-xl px-4 py-3 text-sm transition disabled:opacity-60 disabled:cursor-not-allowed ${theme === 'dark' 
                     ? 'glass-input text-white' 
                     : 'glass-input-light text-slate-800'
                   }`} />
                   <p className={`text-xs ${theme === 'dark' ? 'text-blue-200/50' : 'text-slate-500'}`}>
-                    This supplements your main location for more specific searches
+                    Enter a new location to update your current location
                   </p>
                 </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className={`text-xs font-medium tracking-wide ${theme === 'dark' ? 'text-blue-200/60' : 'text-slate-600'}`}>Search Radius (km)</label>
-                    <span className={`text-xs font-semibold ${theme === 'dark' ? 'text-blue-200/70' : 'text-slate-600'}`}>{profile.radiusKm} km</span>
-                  </div>
-                  <input type="range" min={5} max={100} step={5} disabled={!editing} value={profile.radiusKm} onChange={e=>setProfile(p=>({...p, radiusKm: Number(e.target.value)}))} className={`w-full ${theme === 'dark' ? 'accent-blue-500' : 'accent-slate-500'}`} />
-                  <div className={`flex justify-between text-[10px] ${theme === 'dark' ? 'text-blue-200/40' : 'text-slate-600/80'}`}>
-                    <span>5</span><span>25</span><span>50</span><span>75</span><span>100</span>
-                  </div>
-                </div>
-                <div className="grid sm:grid-cols-3 gap-4">
-                  {(['Urban','Suburban','Rural'] as Array<'Urban'|'Suburban'|'Rural'>).map(t => (
-                    <button key={t} onClick={()=>guardEdit(()=>setSelectedLocaleType(t))} className={`px-4 py-2.5 rounded-xl text-xs font-semibold border transition relative ${selectedLocaleType===t ? (theme === 'dark' 
-                      ? 'bg-blue-600/30 border-blue-400/40 text-white ring-1 ring-blue-300/40' 
-                      : 'bg-slate-400/30 border-slate-500/40 text-slate-800 ring-1 ring-slate-400/40'
-                    ) : (theme === 'dark' 
-                      ? 'bg-white/5 border-white/10 text-blue-200/70 hover:bg-white/10' 
-                      : 'silver-button hover:scale-105'
-                    )} ${!editing && 'opacity-60 cursor-not-allowed'}`}>
-                      {t}
-                      {selectedLocaleType===t && <span className={`absolute -top-2 -right-2 text-white text-[10px] px-1.5 py-0.5 rounded-full ${theme === 'dark' ? 'bg-blue-500' : 'bg-slate-600'}`}>Active</span>}
-                    </button>
-                  ))}
-                </div>
               </div>
-            ), 'Adjust how location shapes your results')}
-
-            {sectionWrapper('notifications', 'Notification Settings', <Bell className="w-5 h-5" />, (
-              <div className="grid sm:grid-cols-2 gap-5">
-                {[
-                  { key:'emailUpdates', label:'Email Updates', desc:'General platform announcements & updates' },
-                  { key:'providerReplies', label:'Provider Replies', desc:'When a contacted provider responds' },
-                  { key:'recommendations', label:'AI Recommendations', desc:'Smart suggestions for better matches' },
-                  { key:'marketing', label:'Promotions & Offers', desc:'Occasional deals and seasonal offers' },
-                  { key:'security', label:'Security Alerts', desc:'Password, login & unusual activity' }
-                ].map(opt => (
-                  <div key={opt.key} className={`flex items-start gap-3 p-3 rounded-xl border transition ${theme === 'dark' 
-                    ? 'bg-white/5 border-white/10 hover:border-white/20' 
-                    : 'bg-white/60 border-slate-200/50 hover:border-slate-300/60 backdrop-blur-sm'
-                  }`}>
-                    <button onClick={()=>toggleSetting('notif', opt.key)} disabled={!editing} className={`relative w-11 h-6 rounded-full toggle-base ${notifSettings[opt.key as keyof typeof notifSettings] ? (theme === 'dark' 
-                      ? 'bg-gradient-to-r from-blue-500 to-indigo-500' 
-                      : 'bg-gradient-to-r from-slate-500 to-slate-600'
-                    ) : (theme === 'dark' ? 'bg-white/15' : 'bg-slate-300/60')} flex items-center px-1 disabled:opacity-40 disabled:cursor-not-allowed`}> 
-                      <span className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${notifSettings[opt.key as keyof typeof notifSettings] ? 'translate-x-5' : ''}`}></span>
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-[13px] font-medium ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{opt.label}</p>
-                      <p className={`text-[11px] mt-1 leading-relaxed ${theme === 'dark' ? 'text-blue-200/60' : 'text-slate-600/80'}`}>{opt.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ), 'Control how you stay informed')}
-
-            {sectionWrapper('privacy', 'Privacy Settings', <Shield className="w-5 h-5" />, (
-              <div className="grid sm:grid-cols-2 gap-5">
-                {[ 
-                  { key:'showProfilePublic', label:'Public Profile', desc:'Allow others to view limited public details' },
-                  { key:'shareActivity', label:'Share Activity', desc:'Share anonymized usage data to improve matches' },
-                  { key:'aiPersonalization', label:'AI Personalization', desc:'Use activity to tailor AI responses' },
-                  { key:'dataCollection', label:'Data Collection', desc:'Help improve the platform experience' }
-                ].map(opt => (
-                  <div key={opt.key} className={`flex items-start gap-3 p-3 rounded-xl border transition ${theme === 'dark' 
-                    ? 'bg-white/5 border-white/10 hover:border-white/20' 
-                    : 'bg-white/60 border-slate-200/50 hover:border-slate-300/60 backdrop-blur-sm'
-                  }`}>
-                    <button onClick={()=>toggleSetting('privacy', opt.key)} disabled={!editing} className={`relative w-11 h-6 rounded-full toggle-base ${privacySettings[opt.key as keyof typeof privacySettings] ? (theme === 'dark' 
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500' 
-                      : 'bg-gradient-to-r from-slate-500 to-slate-600'
-                    ) : (theme === 'dark' ? 'bg-white/15' : 'bg-slate-300/60')} flex items-center px-1 disabled:opacity-40 disabled:cursor-not-allowed`}> 
-                      <span className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${privacySettings[opt.key as keyof typeof privacySettings] ? 'translate-x-5' : ''}`}></span>
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-[13px] font-medium ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{opt.label}</p>
-                      <p className={`text-[11px] mt-1 leading-relaxed ${theme === 'dark' ? 'text-blue-200/60' : 'text-slate-600/80'}`}>{opt.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ), 'Customize your privacy preferences')}
+            ), 'View and update your location')}
 
             {sectionWrapper('accounts', 'Connected Accounts', <Link2 className="w-5 h-5" />, (
               <div className="grid sm:grid-cols-2 gap-5">

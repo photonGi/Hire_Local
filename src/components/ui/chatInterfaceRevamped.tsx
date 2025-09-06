@@ -559,9 +559,11 @@ const WelcomeScreen: React.FC<{ onSelect: (query: string) => void; theme: "light
     subtitle: theme === "dark" ? "text-slate-400 text-lg mt-3" : "text-slate-600 text-lg mt-3",
     serviceButton: theme === "dark" ? "group bg-slate-800/40 p-6 rounded-3xl border border-slate-700/60 shadow-lg shadow-black/20 text-center transition-all duration-300 hover:border-teal-500/50 hover:bg-slate-800/60" : "group bg-white/80 p-6 rounded-3xl border border-slate-300/60 shadow-lg shadow-gray-400/20 text-center transition-all duration-300 hover:border-blue-500/50 hover:bg-white/90",
     serviceText: theme === "dark" ? "font-semibold text-base text-slate-200 group-hover:text-white transition-colors" : "font-semibold text-base text-slate-700 group-hover:text-slate-800 transition-colors",
-    locationInfo: theme === "dark" ? "text-center mb-8 p-4 bg-slate-800/30 rounded-2xl border border-slate-700/50" : "text-center mb-8 p-4 bg-white/60 rounded-2xl border border-slate-300/50",
-    locationText: theme === "dark" ? "text-slate-300 text-sm" : "text-slate-600 text-sm",
-    locationValue: theme === "dark" ? "text-white font-semibold" : "text-slate-800 font-semibold",
+    locationInfo: theme === "dark" 
+      ? "text-center mb-8 p-5 bg-slate-800/40 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-lg shadow-black/20" 
+      : "text-center mb-8 p-5 bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-300/50 shadow-lg shadow-gray-400/20",
+    locationText: theme === "dark" ? "text-slate-400 text-sm font-medium" : "text-slate-600 text-sm font-medium",
+    locationValue: theme === "dark" ? "text-white font-bold text-base mt-1" : "text-slate-800 font-bold text-base mt-1",
   };
 
   const locationDisplay = userLocation ? locationService.formatLocationForDisplay(userLocation) : "Location not set";
@@ -580,10 +582,12 @@ const WelcomeScreen: React.FC<{ onSelect: (query: string) => void; theme: "light
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <div className="flex items-center justify-center gap-2">
-            <LocationIcon />
-            <div>
-              <p className={themeClasses.locationText}>Searching in</p>
+          <div className="flex items-center justify-center gap-3">
+            <div className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-teal-500/20 text-teal-300' : 'bg-blue-500/20 text-blue-600'}`}>
+              <LocationIcon />
+            </div>
+            <div className="text-left">
+              <p className={themeClasses.locationText}>Searching services in</p>
               <p className={themeClasses.locationValue}>{locationDisplay}</p>
             </div>
           </div>
