@@ -40,6 +40,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
+  signInWithFacebook: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, displayName?: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -170,7 +171,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserProfile(basicProfile);
       }
     } catch (error) {
-      console.error('Error signing in:', error);
+      console.error('Error signing in with Google:', error);
+      throw error;
+    }
+  };
+
+  const signInWithFacebook = async () => {
+    try {
+      const result = await firebaseAuth.signInWithFacebook();
+      if (!result) throw new Error('No user returned from Facebook sign in');
+      const profile = await userService.getUserProfile(result.uid);
+      if (profile) {
+        setUserProfile(profile as UserProfile);
+      } else {
+        const basicProfile: UserProfile = {
+          id: result.uid,
+          email: result.email,
+          displayName: result.displayName,
+          photoURL: result.photoURL,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        setUserProfile(basicProfile);
+      }
+    } catch (error) {
+      console.error('Error signing in with Facebook:', error);
       throw error;
     }
   };
@@ -261,6 +286,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         userProfile,
         loading,
         signInWithGoogle,
+        signInWithFacebook,
         signInWithEmail,
         signUpWithEmail,
         resetPassword,

@@ -1,17 +1,20 @@
 import {
   GoogleAuthProvider,
+  FacebookAuthProvider,
   signInWithPopup,
   signOut,
   onAuthStateChanged,
   User,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  updateProfile
 } from 'firebase/auth';
 import { auth, firebaseConfig } from '../firebase/config';
 
 // Provider instances
 const googleProvider = new GoogleAuthProvider();
+const facebookProvider = new FacebookAuthProvider();
 
 export interface AuthUser extends User {
   provider?: string;
@@ -72,6 +75,43 @@ export class AuthService {
     }
   }
 
+  async signInWithFacebook() {
+    try {
+      console.log('Starting Facebook sign-in...');
+      console.log('Firebase Config:', {
+        authDomain: firebaseConfig.authDomain,
+        projectId: firebaseConfig.projectId,
+        apiKeyLastFour: firebaseConfig.apiKey ? firebaseConfig.apiKey.slice(-4) : 'none'
+      });
+      
+      const result = await signInWithPopup(auth, facebookProvider);
+      console.log('Facebook sign-in popup completed');
+      
+      const user = result.user as AuthUser;
+      user.provider = 'facebook';
+      console.log('User authenticated:', user.email);
+      
+      // Get ID token
+      const idToken = await user.getIdToken();
+      console.log('Got ID token');
+      
+      // Verify with backend
+      await this.verifyWithBackend(idToken, 'facebook');
+      console.log('Backend verification complete');
+      
+      return user;
+    } catch (error) {
+      console.error('Facebook sign-in error:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+        if ('code' in error) {
+          console.error('Firebase error code:', (error as any).code);
+        }
+      }
+      throw new Error(error instanceof Error ? error.message : 'Failed to sign in with Facebook');
+    }
+  }
+
   async signInWithEmail(email: string, password: string) {
     try {
       console.log('Starting email sign-in...');
@@ -103,6 +143,17 @@ export class AuthService {
       
       const user = result.user as AuthUser;
       user.provider = 'email';
+      
+      // Update display name if provided
+      if (displayName && user.displayName !== displayName) {
+        try {
+          await updateProfile(user, { displayName });
+          console.log('Display name updated:', displayName);
+        } catch (updateError) {
+          console.warn('Failed to update display name:', updateError);
+        }
+      }
+      
       console.log('User created:', user.email);
       
       return user;

@@ -1,5 +1,6 @@
 import { 
   GoogleAuthProvider, 
+  FacebookAuthProvider,
   signInWithPopup, 
   onAuthStateChanged,
   signOut,
@@ -19,6 +20,7 @@ import { auth, db } from './config';
 import { UserActivityService } from '../services/UserActivityService';
 
 export const googleProvider = new GoogleAuthProvider();
+export const facebookProvider = new FacebookAuthProvider();
 
 // Auth Methods - exactly what AuthContext.tsx expects
 export const firebaseAuth = {
@@ -38,6 +40,26 @@ export const firebaseAuth = {
       return result.user;
     } catch (error) {
       console.error('Error signing in with Google:', error);
+      throw error;
+    }
+  },
+
+  async signInWithFacebook() {
+    try {
+      const result = await signInWithPopup(auth, facebookProvider);
+      await this.createUserProfile(result.user);
+      
+      // Initialize user activity for new or existing users
+      try {
+        await UserActivityService.initializeUserActivity(result.user.uid);
+      } catch (activityError) {
+        console.warn('Failed to initialize user activity:', activityError);
+        // Don't fail the login if activity initialization fails
+      }
+      
+      return result.user;
+    } catch (error) {
+      console.error('Error signing in with Facebook:', error);
       throw error;
     }
   },
