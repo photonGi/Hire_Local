@@ -19,6 +19,7 @@ import { ThemeProvider } from './theme/ThemeContext'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { RedirectIfAuthenticated } from './components/RedirectIfAuthenticated'
+import PrivacyPolicy from './components/PrivacyPolicy'
 
 function App() {
   return (
@@ -49,6 +50,7 @@ function App() {
               <Route path="/professionals" element={<ComingSoonScreen />} />
               <Route path="/pricing" element={<ComingSoonScreen />} />
               <Route path="/support" element={<ComingSoonScreen />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               
               {/* Admin Routes - These will get their own protection later */}
               <Route path="/admin/login" element={<AdminLogin />} />
