@@ -20,6 +20,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { RedirectIfAuthenticated } from './components/RedirectIfAuthenticated'
 import PrivacyPolicy from './components/PrivacyPolicy'
+import DataDeletion from './components/DataDeletion'
 
 function App() {
   return (
@@ -51,6 +52,7 @@ function App() {
               <Route path="/pricing" element={<ComingSoonScreen />} />
               <Route path="/support" element={<ComingSoonScreen />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/user-data-deletion" element={<DataDeletion />} />
               
               {/* Admin Routes - These will get their own protection later */}
               <Route path="/admin/login" element={<AdminLogin />} />
