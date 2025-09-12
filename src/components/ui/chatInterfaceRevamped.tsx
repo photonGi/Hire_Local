@@ -949,7 +949,7 @@ export default function App(): JSX.Element {
       
       const payload = { query: formattedQuery };
       console.debug("[chat] Sending payload to server:", payload);
-      const resp = await fetch("https://web-production-b9056.up.railway.app/api/query", {
+      const resp = await fetch("https://hire-app-backend.up.railway.app/api/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

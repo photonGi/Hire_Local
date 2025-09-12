@@ -1,16 +1,19 @@
 # Frontend Integration Guide: Railway Backend
 
 ## Overview
-This guide explains how to connect your React frontend to the deployed Railway backend API at `https://web-production-b9056.up.railway.app/`
+
+This guide explains how to connect your React frontend to the deployed Railway backend API at `https://hire-app-backend.up.railway.app/`
 
 ## Backend API Details
 
 ### Base URL
+
 ```
-https://web-production-b9056.up.railway.app/
+https://hire-app-backend.up.railway.app/
 ```
 
 ### Available Endpoint
+
 - **POST** `/api/query` - Main chat endpoint for service provider queries
 
 ## Frontend Integration Steps
@@ -20,13 +23,15 @@ https://web-production-b9056.up.railway.app/
 Replace any localhost URLs with the Railway deployment URL:
 
 **Before:**
+
 ```tsx
 const resp = await fetch("http://127.0.0.1:8000/api/query", {
 ```
 
 **After:**
+
 ```tsx
-const resp = await fetch("https://web-production-b9056.up.railway.app/api/query", {
+const resp = await fetch("https://hire-app-backend.up.railway.app/api/query", {
 ```
 
 ### 2. Example API Call
@@ -36,12 +41,15 @@ const handleSendMessage = async (query: string) => {
   try {
     const payload = { query };
     console.debug("[chat] Sending payload to server:", payload);
-    
-    const resp = await fetch("https://web-production-b9056.up.railway.app/api/query", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+
+    const resp = await fetch(
+      "https://hire-app-backend.up.railway.app/api/query",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
 
     if (!resp.ok) {
       const txt = await resp.text();
@@ -50,7 +58,7 @@ const handleSendMessage = async (query: string) => {
 
     const data = await resp.json();
     console.debug("[chat] Received response from server:", data);
-    
+
     // Handle the response data
     return data;
   } catch (error) {
@@ -63,6 +71,7 @@ const handleSendMessage = async (query: string) => {
 ## API Request/Response Format
 
 ### Request Format
+
 ```json
 {
   "query": "plumber near lahore"
@@ -70,6 +79,7 @@ const handleSendMessage = async (query: string) => {
 ```
 
 ### Response Format
+
 ```json
 {
   "valid": true,
@@ -119,13 +129,15 @@ const handleSendMessage = async (query: string) => {
 ## Testing the Integration
 
 ### 1. Test API Directly (PowerShell)
+
 ```powershell
-curl -Method POST -Uri https://web-production-b9056.up.railway.app/api/query -Headers @{'Content-Type'='application/json'} -Body '{"query":"plumber near lahore"}'
+curl -Method POST -Uri https://hire-app-backend.up.railway.app/api/query -Headers @{'Content-Type'='application/json'} -Body '{"query":"plumber near lahore"}'
 ```
 
 ### 2. Test API Directly (bash/curl)
+
 ```bash
-curl -X POST https://web-production-b9056.up.railway.app/api/query \
+curl -X POST https://hire-app-backend.up.railway.app/api/query \
   -H "Content-Type: application/json" \
   -d '{"query":"plumber near lahore"}'
 ```
@@ -133,6 +145,7 @@ curl -X POST https://web-production-b9056.up.railway.app/api/query \
 ### 3. Frontend Testing Checklist
 
 1. **Start your development server:**
+
    ```bash
    npm run dev
    # or
@@ -152,19 +165,23 @@ curl -X POST https://web-production-b9056.up.railway.app/api/query \
 ## Common Issues & Solutions
 
 ### CORS Errors
+
 If you see:
+
 ```
-Access to fetch at 'https://web-production-b9056.up.railway.app/api/query' from origin 'http://localhost:3000' has been blocked by CORS policy
+Access to fetch at 'https://hire-app-backend.up.railway.app/api/query' from origin 'http://localhost:3000' has been blocked by CORS policy
 ```
 
 **Solution:** The backend already includes CORS middleware for localhost origins. If you're running on a different port, let the backend team know.
 
 ### Network Errors
+
 - Check if Railway service is running
 - Verify the URL is correct
 - Check browser network tab for detailed error information
 
 ### Response Parsing Errors
+
 - Ensure you're parsing JSON response correctly
 - Check if the response format matches the expected structure
 - Use console.log to debug response data
@@ -177,18 +194,20 @@ Create environment variables for different stages:
 
 ```tsx
 // config.ts
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://web-production-b9056.up.railway.app'
-  : 'https://web-production-b9056.up.railway.app'; // Same for now
+const API_BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://hire-app-backend.up.railway.app"
+    : "https://hire-app-backend.up.railway.app"; // Same for now
 
 export const API_ENDPOINTS = {
-  query: `${API_BASE_URL}/api/query`
+  query: `${API_BASE_URL}/api/query`,
 };
 ```
 
 Then use it in your components:
+
 ```tsx
-import { API_ENDPOINTS } from '../config';
+import { API_ENDPOINTS } from "../config";
 
 const resp = await fetch(API_ENDPOINTS.query, {
   method: "POST",
@@ -202,16 +221,19 @@ const resp = await fetch(API_ENDPOINTS.query, {
 The API supports various types of queries:
 
 1. **Service + Location:**
+
    - "plumber near lahore"
    - "electrician in karachi"
    - "restaurant in islamabad"
 
 2. **General Service:**
+
    - "need a plumber"
    - "looking for electrician"
    - "find restaurants"
 
 3. **Load More:**
+
    - "show more"
    - "generate 5 more"
    - "load more providers"
@@ -238,6 +260,7 @@ The API supports various types of queries:
 ## Support
 
 If you encounter issues:
+
 1. Check the console logs first
 2. Test the API directly with curl
 3. Verify the request payload format
@@ -246,5 +269,5 @@ If you encounter issues:
 ---
 
 **Last Updated:** September 1, 2025  
-**Backend URL:** https://web-production-b9056.up.railway.app/  
+**Backend URL:** https://hire-app-backend.up.railway.app/  
 **Status:** ✅ Active and Ready for Integration
