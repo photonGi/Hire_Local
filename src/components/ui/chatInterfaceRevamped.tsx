@@ -965,6 +965,8 @@ export default function App(): JSX.Element {
       console.debug("[chat] Received response from server:", data);
 
       const providers = Array.isArray(data.providers) && data.providers.length ? data.providers : null;
+
+      console.log("what we got:",providers)
       const responseText = data.message ?? (providers ? `I found ${providers.length} providers.` : "I can certainly help. What service are you looking for today?");
       const suggestions = Array.isArray(data.suggestions) && data.suggestions.length ? data.suggestions : null;
 
