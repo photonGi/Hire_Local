@@ -9,6 +9,7 @@ import { locationService } from "../../services/LocationService";
 import { LocationModal } from "../LocationModal";
 import type { Business } from "../../types/firebase";
 import type { UserLocation } from "../../types/firebase";
+import { formatPhoneForWaMe } from "../../utils/PhoneNumberFormatter";
 
 /* ------------------- Types ------------------- */
 type Sender = "user" | "ai";
@@ -20,6 +21,7 @@ interface Provider {
   details?: string;
   location_note?: string;
   confidence?: string;
+  service?: string;
   saved?: boolean;
   saveId?: string;
 }
@@ -447,11 +449,11 @@ const ProviderCard: React.FC<{ provider: Provider; theme: "light" | "dark" }> = 
     divider: theme === "dark" ? "mt-4 pt-4 border-t border-slate-700/50 space-y-3" : "mt-4 pt-4 border-t border-slate-300/50 space-y-3",
     saveButton: theme === "dark" 
       ? saved 
-        ? "w-8 h-8 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-300 hover:text-teal-200 transition-all duration-200 flex items-center justify-center shadow-sm"
-        : "w-8 h-8 rounded-lg bg-slate-700/40 hover:bg-slate-600/60 border border-slate-600/50 text-slate-400 hover:text-slate-300 transition-all duration-200 flex items-center justify-center shadow-sm"
+        ? "w-8 h-8 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-300 hover:text-teal-200 transition-all duration-200 flex items-center justify-center shadow-sm absolute top-0 right-0"
+        : "w-8 h-8 rounded-lg bg-slate-700/40 hover:bg-slate-600/60 border border-slate-600/50 text-slate-400 hover:text-slate-300 transition-all duration-200 flex items-center justify-center shadow-sm absolute top-0 right-0"
       : saved
-        ? "w-8 h-8 rounded-lg bg-blue-100/80 hover:bg-blue-200/80 border border-blue-300/60 text-blue-600 hover:text-blue-700 transition-all duration-200 flex items-center justify-center shadow-sm"
-        : "w-8 h-8 rounded-lg bg-gray-100/80 hover:bg-gray-200/80 border border-gray-300/60 text-gray-500 hover:text-gray-600 transition-all duration-200 flex items-center justify-center shadow-sm",
+        ? "w-8 h-8 rounded-lg bg-blue-100/80 hover:bg-blue-200/80 border border-blue-300/60 text-blue-600 hover:text-blue-700 transition-all duration-200 flex items-center justify-center shadow-sm absolute top-0 right-0"
+        : "w-8 h-8 rounded-lg bg-gray-100/80 hover:bg-gray-200/80 border border-gray-300/60 text-gray-500 hover:text-gray-600 transition-all duration-200 flex items-center justify-center shadow-sm absolute top-0 right-0",
   };
 
   return (
@@ -463,8 +465,8 @@ const ProviderCard: React.FC<{ provider: Provider; theme: "light" | "dark" }> = 
       className={themeClasses.card}
     >
       <div className="flex-grow">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-grow">
+        <div className="flex items-start justify-between gap-3 relative">
+          <div className="flex-grow pr-[2.3rem]">
             <h3 className={themeClasses.name}>{provider.name}</h3>
           </div>
           <button
@@ -484,7 +486,23 @@ const ProviderCard: React.FC<{ provider: Provider; theme: "light" | "dark" }> = 
       </div>
 
       <div className={themeClasses.divider}>
-        <div className={themeClasses.contact}><PhoneIcon /><span>{provider.phone}</span></div>
+        <div className={themeClasses.contact}>
+          {provider.phone && (
+            <a
+              href={`https://wa.me/${formatPhoneForWaMe(provider.phone)}?text=${encodeURIComponent(
+                `Hi, I found your contact on HireLocal and I’m interested in your ${
+                  provider.service || "serviceType"
+                } services. Could you please share more details?\n\nThanks!`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 hover:underline"
+            >
+              <PhoneIcon />
+              <span>{provider.phone}</span>
+            </a>
+          )}
+        </div>
         <div className={themeClasses.contact}><LocationIcon /><span>{provider.address}</span></div>
       </div>
     </motion.div>
@@ -548,7 +566,7 @@ const MessageBubbleComponent: React.FC<MessageBubbleProps> = ({ m, onSuggestionS
           )}
         </div>
 
-        <AnimatePresence>
+        {/* <AnimatePresence>
           {m.suggestions && m.suggestionsVisible && isTypingComplete && (
             <motion.div className="flex flex-wrap gap-2" exit={{ opacity: 0, y: -10, transition: { duration: 0.3 } }}>
               {m.suggestions.map((suggestion, idx) => (
@@ -565,7 +583,7 @@ const MessageBubbleComponent: React.FC<MessageBubbleProps> = ({ m, onSuggestionS
               ))}
             </motion.div>
           )}
-        </AnimatePresence>
+        </AnimatePresence> */}
 
         <AnimatePresence>
           {m.providers && isTypingComplete && (
