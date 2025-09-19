@@ -616,6 +616,7 @@ input:focus {
   
   .h-screen-custom{
     height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom);
     height: -webkit-fill-available;
   }
 }
