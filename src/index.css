@@ -561,6 +561,9 @@ input:focus {
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
+.h-screen-custom{
+  height: 100vh;
+}
 /* Backdrop blur support */
 @supports (backdrop-filter: blur(10px)) {
   .backdrop-blur-fallback {
@@ -606,5 +609,9 @@ input:focus {
   }
   .subfonthandling{
     font-size: 12px;
+  }
+  
+  .h-screen-custom{
+    height: 100dvh;
   }
 }

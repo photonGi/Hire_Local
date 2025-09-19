@@ -928,7 +928,7 @@ export default function App(): JSX.Element {
   };
 
   const themeClasses = {
-    mainContainer: theme === "dark" ? "flex flex-col h-screen bg-slate-950 text-white overflow-hidden" : "flex flex-col h-screen bg-gradient-to-br from-slate-100 via-gray-50 to-slate-200 text-slate-800 overflow-hidden",
+    mainContainer: theme === "dark" ? "flex flex-col h-screen-custom bg-slate-950 text-white overflow-hidden" : "flex flex-col h-screen-custom bg-gradient-to-br from-slate-100 via-gray-50 to-slate-200 text-slate-800 overflow-hidden",
     header: theme === "dark" ? "sticky top-0 z-20 py-4 md:px-4 px-2 bg-slate-950/70 backdrop-blur-lg border-b border-slate-800/50" : "sticky top-0 z-20 py-4 md:px-4 px-2 bg-gradient-to-r from-gray-500/95 via-gray-600/95 to-gray-700/95 backdrop-blur-lg border-b border-gray-400/60 shadow-xl shadow-gray-600/40",
     headerTitle: theme === "dark" ? "font-semibold text-white" : "font-semibold bg-gradient-to-r from-gray-50 via-white to-gray-100 bg-clip-text text-transparent",
     headerSubtitle: theme === "dark" ? "text-sm text-slate-400" : "text-sm text-gray-200 font-medium",
