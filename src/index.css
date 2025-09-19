@@ -599,3 +599,12 @@ input:focus {
     scroll-behavior: auto !important;
   }
 }
+
+@media(max-width:767px){
+  .fonthandling{
+    font-size: 22px;
+  }
+  .subfonthandling{
+    font-size: 12px;
+  }
+}

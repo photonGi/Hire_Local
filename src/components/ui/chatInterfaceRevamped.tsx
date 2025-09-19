@@ -1050,10 +1050,10 @@ export default function App(): JSX.Element {
             >
               <BackIcon />
             </button>
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-teal-500/20">S</div>
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 md:flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-teal-500/20 hidden">S</div>
             <div>
-              <h1 className={themeClasses.headerTitle}>Service Assistant</h1>
-              <p className={themeClasses.headerSubtitle}>Your Local Provider Finder</p>
+              <h1 className={`${themeClasses.headerTitle} fonthandling`}>Service Assistant</h1>
+              <p className={`${themeClasses.headerSubtitle} subfonthandling`}>Your Local Provider Finder</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
