@@ -105,7 +105,7 @@
 
 html, body { 
   background: var(--bg-primary); color: var(--text-primary); 
-  height: -webkit-fill-available;
+  height: 100%;
 }
 
 /* Custom Styles for Premium Feel */
@@ -616,7 +616,12 @@ input:focus {
   
   .h-screen-custom{
     height: 100dvh;
-    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  .h-screen-custom {
     height: -webkit-fill-available;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
