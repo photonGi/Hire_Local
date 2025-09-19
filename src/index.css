@@ -602,7 +602,7 @@ input:focus {
 
 @media(max-width:767px){
   .fonthandling{
-    font-size: 22px;
+    font-size: 19px;
   }
   .subfonthandling{
     font-size: 12px;
