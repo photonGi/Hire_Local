@@ -933,7 +933,7 @@ export default function App(): JSX.Element {
     headerTitle: theme === "dark" ? "font-semibold text-white" : "font-semibold bg-gradient-to-r from-gray-50 via-white to-gray-100 bg-clip-text text-transparent",
     headerSubtitle: theme === "dark" ? "text-sm text-slate-400" : "text-sm text-gray-200 font-medium",
     backButton: theme === "dark" ? "flex items-center justify-center w-10 h-10 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 hover:text-white transition-all duration-200 shadow-sm" : "flex items-center justify-center w-10 h-10 rounded-lg bg-white/20 hover:bg-white/30 border border-white/30 text-white hover:text-gray-100 transition-all duration-200 shadow-sm backdrop-blur-sm",
-    footer: theme === "dark" ? "sticky bottom-0 z-20 p-4 bg-slate-950/70 backdrop-blur-lg" : "sticky bottom-0 z-20 p-4 bg-gradient-to-r from-slate-300/95 via-gray-200/90 to-slate-400/95 backdrop-blur-lg shadow-xl shadow-gray-700/40",
+    footer: theme === "dark" ? "sticky bottom-0 z-20 p-4 bg-slate-950/70 backdrop-blur-lg custom-footer-handling" : "sticky bottom-0 z-20 p-4 bg-gradient-to-r from-slate-300/95 via-gray-200/90 to-slate-400/95 backdrop-blur-lg shadow-xl shadow-gray-700/40 custom-footer-handling",
   };
 
   const handleSendMessage = async (text: string) => {

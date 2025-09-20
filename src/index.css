@@ -624,4 +624,7 @@ input:focus {
     height: -webkit-fill-available;
     padding-bottom: env(safe-area-inset-bottom);
   }
+  .custom-footer-handling{
+    padding-bottom: calc(50px + env(safe-area-inset-bottom));
+  }
 }
