@@ -625,6 +625,6 @@ input:focus {
     padding-bottom: env(safe-area-inset-bottom);
   }
   .custom-footer-handling{
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
   }
 }
