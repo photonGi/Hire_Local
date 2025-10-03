@@ -22,7 +22,7 @@ export const AdminLogin: React.FC = () => {
     setTimeout(() => {
       if (formData.email === 'admin@servicegpt.com' && formData.password === 'admin123') {
         alert('Login successful! (Demo)');
-        navigate('/admin');
+        navigate('/admin/dashboard');
       } else {
         alert('Invalid credentials. Use admin@servicegpt.com / admin123');
       }
