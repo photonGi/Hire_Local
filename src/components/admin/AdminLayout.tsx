@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { getThemeStyles, themeClass } from './theme-config';
 import UnifiedThemeToggle from '../shared/UnifiedThemeToggle';
 import { useTheme } from '../../theme/useTheme';
+import { Link } from 'react-router-dom';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -45,7 +46,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   const theme = getThemeStyles(isDark);
 
   const menuItems: MenuItem[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin/dashboard' },
     { id: 'users', label: 'Users', icon: Users, path: '/admin/users', badge: 3 },
     { id: 'search-logs', label: 'Search Logs', icon: Search, path: '/admin/search-logs' },
     { id: 'settings', label: 'Settings', icon: Settings, path: '/admin/settings' },
@@ -65,15 +66,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   const handleLogout = () => {
     console.log('Logout button clicked!');
     setIsLoggingOut(true);
-    
-    // Clear any stored authentication data
-    // Note: In actual implementation, avoid localStorage in artifacts
+
+    localStorage.removeItem('isAdmin');
     setTimeout(() => {
       setIsLoggingOut(false);
       console.log('Navigating to login page');
       navigate('/admin/login');
     }, 500);
   };
+
 
   return (
     <div className={theme.mainBackground + " min-h-screen"}>
@@ -247,12 +248,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
                 {isProfileOpen && (
                   <div className={`absolute right-0 mt-2 w-48 ${theme.dropdownBg} ${theme.border} border rounded-xl shadow-2xl z-[230]`} onClick={(e)=>e.stopPropagation()}>
                     <div className="p-2" onClick={(e) => e.stopPropagation()}>
-                      <button className={`w-full text-left px-3 py-2 ${theme.primaryText} ${themeClass(isDark, 'hover:bg-white/10', 'hover:bg-slate-100')} rounded-lg text-sm`}>
+                      <Link to="/admin/settings" className={`w-full flex text-left px-3 py-2 ${theme.primaryText} ${themeClass(isDark, 'hover:bg-white/10', 'hover:bg-slate-100')} rounded-lg text-sm`}>
                         Profile Settings
-                      </button>
-                      <button className={`w-full text-left px-3 py-2 ${theme.primaryText} ${themeClass(isDark, 'hover:bg-white/10', 'hover:bg-slate-100')} rounded-lg text-sm`}>
+                      </Link>
+                      {/* <button className={`w-full text-left px-3 py-2 ${theme.primaryText} ${themeClass(isDark, 'hover:bg-white/10', 'hover:bg-slate-100')} rounded-lg text-sm`}>
                         Account Security
-                      </button>
+                      </button> */}
                       <hr className={`my-2 ${theme.border}`} />
                       <button
                         onClick={(e) => {

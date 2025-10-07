@@ -21,6 +21,10 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { RedirectIfAuthenticated } from './components/RedirectIfAuthenticated'
 import PrivacyPolicy from './components/PrivacyPolicy'
 import DataDeletion from './components/DataDeletion'
+import { AdminProtectedRoute } from './components/AdminProtectedRoute'
+import UserList from './components/admin/UserList'
+import SearchLogs from './components/admin/SearchLogs'
+import AdminSettings from './components/admin/AdminSettings'
 
 function App() {
   return (
@@ -56,8 +60,11 @@ function App() {
               
               {/* Admin Routes - These will get their own protection later */}
               <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
+              <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+              <Route path="/admin/analytics" element={<AdminProtectedRoute><AnalyticsDashboard /></AdminProtectedRoute>} />
+              <Route path="/admin/users" element={<AdminProtectedRoute><UserList /></AdminProtectedRoute>} />
+              <Route path="/admin/search-logs" element={<AdminProtectedRoute><SearchLogs /></AdminProtectedRoute>} />
+              <Route path="/admin/settings" element={<AdminProtectedRoute><AdminSettings /></AdminProtectedRoute>} />
             </Routes>
           </div>
         </Router>

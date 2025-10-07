@@ -3,6 +3,8 @@ import { Shield, Search, Eye, EyeOff, Lock, User } from 'lucide-react';
 import { useTheme } from '../../theme/useTheme';
 import { UnifiedThemeToggle } from '../shared';
 import { useNavigate } from 'react-router-dom';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '../../firebase/config';
 
 export const AdminLogin: React.FC = () => {
   const { theme } = useTheme();
@@ -19,15 +21,40 @@ export const AdminLogin: React.FC = () => {
     setIsLoading(true);
     
     // Mock authentication
-    setTimeout(() => {
-      if (formData.email === 'admin@servicegpt.com' && formData.password === 'admin123') {
-        alert('Login successful! (Demo)');
-        navigate('/admin/dashboard');
+    // setTimeout(() => {
+    //   if (formData.email === 'admin@servicegpt.com' && formData.password === 'admin123') {
+    //     alert('Login successful! (Demo)');
+    //     navigate('/admin/dashboard');
+    //   } else {
+    //     alert('Invalid credentials. Use admin@servicegpt.com / admin123');
+    //   }
+    //   setIsLoading(false);
+    // }, 1000);
+
+    try {
+        const q = query(
+        collection(db, "admins"),
+        where("email", "==", formData.email),
+        where("password", "==", formData.password)
+      );
+
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        // Found matching admin
+        const adminData = querySnapshot.docs[0].data();
+        alert(`Welcome ${adminData.name || "Admin"}!`);
+        localStorage.setItem("isAdmin", "true");
+        navigate("/admin/dashboard");
       } else {
-        alert('Invalid credentials. Use admin@servicegpt.com / admin123');
+        alert("Invalid admin credentials");
       }
+    } catch (error:any) {
+      alert("Error logging in: " + error.message);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
+
+    
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

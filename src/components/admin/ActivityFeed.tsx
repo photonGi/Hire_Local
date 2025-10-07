@@ -1,5 +1,13 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Clock, User, Search, Settings } from 'lucide-react';
+import {
+  collection,
+  getDocs,
+  orderBy,
+  limit,
+  query,
+} from 'firebase/firestore';
+import { db } from '../../firebase/config';
 import { getThemeStyles, themeClass } from './theme-config';
 
 interface ActivityItem {
@@ -15,62 +23,74 @@ interface ActivityFeedProps {
   isDark?: boolean;
 }
 
-const ActivityFeed: React.FC<ActivityFeedProps> = ({ 
-  className = '', 
-  isDark = true 
+const ActivityFeed: React.FC<ActivityFeedProps> = ({
+  className = '',
+  isDark = true,
 }) => {
   const theme = getThemeStyles(isDark);
-  
-  const activities: ActivityItem[] = [
-    {
-      id: '1',
-      type: 'user',
-      message: 'New user registration from John Doe',
-      timestamp: '2 minutes ago',
-      user: 'john.doe@email.com'
-    },
-    {
-      id: '2',
-      type: 'search',
-      message: 'Search performed for "electrician" in New York',
-      timestamp: '5 minutes ago',
-      user: 'jane.smith@email.com'
-    },
-    {
-      id: '3',
-      type: 'provider',
-      message: 'New provider "ABC Plumbing" submitted for verification',
-      timestamp: '8 minutes ago'
-    },
-    {
-      id: '4',
-      type: 'system',
-      message: 'Daily backup completed successfully',
-      timestamp: '15 minutes ago'
-    },
-    {
-      id: '5',
-      type: 'user',
-      message: 'User Sarah Wilson updated profile',
-      timestamp: '22 minutes ago',
-      user: 'sarah.wilson@email.com'
-    },
-    {
-      id: '6',
-      type: 'search',
-      message: 'High volume search activity detected',
-      timestamp: '25 minutes ago'
-    },
-    {
-      id: '7',
-      type: 'system',
-      message: 'API rate limit reached for user premium tier',
-      timestamp: '30 minutes ago'
-    },
-  ];
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        setIsLoading(true);
+
+        // 🔹 Recent Users
+        const usersSnap = await getDocs(
+          query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(5))
+        );
+        const userActivities: ActivityItem[] = usersSnap.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            type: 'user',
+            message: `New user registered: ${data.name || 'Unnamed User'}`,
+            timestamp: data.createdAt?.toDate
+              ? new Date(data.createdAt.toDate()).toLocaleString()
+              : 'Unknown',
+            user: data.email || 'N/A',
+          };
+        });
+
+        // 🔹 Recent Searches
+        const searchSnap = await getDocs(
+          query(collection(db, 'queries'), orderBy('createdAt', 'desc'), limit(5))
+        );
+        const searchActivities: ActivityItem[] = searchSnap.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            type: 'search',
+            message: `Search for "${data.formattedQuery || data.query}" in ${
+              data.location || 'Unknown location'
+            }`,
+            timestamp: data.createdAt?.toDate
+              ? new Date(data.createdAt.toDate()).toLocaleString()
+              : 'Unknown',
+          };
+        });
+
+        // 🔹 Combine & sort all activities
+        const combined = [...userActivities, ...searchActivities].sort((a, b) => {
+          return (
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          );
+        });
+
+        setActivities(combined.slice(0, 8)); // show top 8
+      } catch (err) {
+        console.error('Error fetching activity feed:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchActivities();
+  }, []);
 
   const getActivityIcon = (type: ActivityItem['type']) => {
-    const iconClass = "w-4 h-4";
+    const iconClass = 'w-4 h-4';
     switch (type) {
       case 'user':
         return <User className={iconClass} />;
@@ -101,30 +121,61 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({
   };
 
   return (
-    <div className={`${theme.cardBackground} ${theme.cardBorder} border rounded-2xl p-6 ${className}`}>
+    <div
+      className={`${theme.cardBackground} ${theme.cardBorder} border rounded-2xl p-6 ${className}`}
+    >
       <div className="flex items-center justify-between mb-6">
-        <h3 className={`text-lg font-semibold ${theme.primaryText}`}>Recent Activity</h3>
+        <h3 className={`text-lg font-semibold ${theme.primaryText}`}>
+          Recent Activity
+        </h3>
         <button className={`${theme.accentText} hover:opacity-80 text-sm`}>
           View All
         </button>
       </div>
-      
-      <div className="space-y-4">
-        {activities.map((activity) => (
-          <div key={activity.id} className={`flex items-start space-x-3 p-3 rounded-lg ${themeClass(isDark, 'hover:bg-white/5', 'hover:bg-slate-50')} transition-colors`}>
-            <div className={`w-8 h-8 bg-gradient-to-br ${getActivityColor(activity.type)} rounded-lg flex items-center justify-center flex-shrink-0`}>
-              {getActivityIcon(activity.type)}
+
+      {isLoading ? (
+        <p className="text-sm text-center text-gray-400 py-8">
+          Loading recent activity...
+        </p>
+      ) : activities.length === 0 ? (
+        <p className="text-sm text-center text-gray-400 py-8">
+          No recent activity found.
+        </p>
+      ) : (
+        <div className="space-y-4">
+          {activities.map((activity) => (
+            <div
+              key={activity.id}
+              className={`flex items-start space-x-3 p-3 rounded-lg ${themeClass(
+                isDark,
+                'hover:bg-white/5',
+                'hover:bg-slate-50'
+              )} transition-colors`}
+            >
+              <div
+                className={`w-8 h-8 bg-gradient-to-br ${getActivityColor(
+                  activity.type
+                )} rounded-lg flex items-center justify-center flex-shrink-0`}
+              >
+                {getActivityIcon(activity.type)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`${theme.primaryText} text-sm`}>
+                  {activity.message}
+                </p>
+                {activity.user && (
+                  <p className={`${theme.accentText} text-xs mt-1`}>
+                    {activity.user}
+                  </p>
+                )}
+                <p className={`${theme.secondaryText} text-xs mt-1`}>
+                  {activity.timestamp}
+                </p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className={`${theme.primaryText} text-sm`}>{activity.message}</p>
-              {activity.user && (
-                <p className={`${theme.accentText} text-xs mt-1`}>{activity.user}</p>
-              )}
-              <p className={`${theme.secondaryText} text-xs mt-1`}>{activity.timestamp}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

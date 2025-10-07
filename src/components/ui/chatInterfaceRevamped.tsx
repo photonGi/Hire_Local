@@ -10,6 +10,8 @@ import { LocationModal } from "../LocationModal";
 import type { Business } from "../../types/firebase";
 import type { UserLocation } from "../../types/firebase";
 import { formatPhoneForWaMe } from "../../utils/PhoneNumberFormatter";
+import { addDoc, collection, doc, increment, serverTimestamp, setDoc } from "firebase/firestore";
+import { db } from "../../firebase/config";
 
 /* ------------------- Types ------------------- */
 type Sender = "user" | "ai";
@@ -961,6 +963,14 @@ export default function App(): JSX.Element {
     stageTimersRef.current.push(window.setTimeout(() => setAiStage("searching"), 1200));
     stageTimersRef.current.push(window.setTimeout(() => setAiStage("organizing"), 2500));
 
+    const detectServiceType = (input: string) => {
+      const services = ["electrician", "plumber", "contractor", "cleaner", "barber", "handyman", "mechanic"];
+      const lower = input.toLowerCase();
+      return services.find(s => lower.includes(s)) || "other";
+    };
+    const serviceType = detectServiceType(text); 
+
+
     try {
       // Format the query to include actual location for "near me" queries
       const formattedQuery = formatLocationForAPI(text);
@@ -973,6 +983,29 @@ export default function App(): JSX.Element {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      await addDoc(collection(db, "queries"), {
+        query: text,
+        formattedQuery,
+        location: locationCity?.city || null,
+        serviceType: serviceType || null,
+        createdAt: serverTimestamp(),
+      });
+
+      // 2) Increment today's apiCalls in a separate collection
+      const today = new Date().toISOString().split("T")[0]; 
+      const apiCallsRef = doc(db, "apiCalls", today);
+
+      await setDoc(
+        apiCallsRef,
+        {
+          date: today,
+          apiCalls: increment(1),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true } // will create if not exists, increment if exists
+      );
+
+      console.log("✅ Query stored, API call counter updated");
 
       if (!resp.ok) {
         const txt = await resp.text();
