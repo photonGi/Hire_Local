@@ -345,14 +345,6 @@ export const AdminLogin: React.FC = () => {
               </button>
             </div>
 
-            {/* Light Theme Demo Credentials */}
-            <div className="mt-6 p-4 bg-slate-100/60 border border-slate-300/60 rounded-lg shadow-inner">
-              <div className="text-slate-700 text-sm font-medium mb-2">Demo Credentials:</div>
-              <div className="text-slate-600 text-sm">
-                <div>Email: admin@servicegpt.com</div>
-                <div>Password: admin123</div>
-              </div>
-            </div>
 
             {/* Light Theme Security Notice */}
             <div className="mt-6 text-center">
