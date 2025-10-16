@@ -47,7 +47,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
 
   const menuItems: MenuItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin/dashboard' },
-    { id: 'users', label: 'Users', icon: Users, path: '/admin/users', badge: 3 },
+    { id: 'users', label: 'Users', icon: Users, path: '/admin/users' },
     { id: 'search-logs', label: 'Search Logs', icon: Search, path: '/admin/search-logs' },
     { id: 'settings', label: 'Settings', icon: Settings, path: '/admin/settings' },
   ];
