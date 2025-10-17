@@ -8,8 +8,8 @@ import DonutChart from './charts/DonutChart';
 import HeatMap from './charts/HeatMap';
 import { useAdminTheme } from './theme-config';
 import { useTheme } from '../../theme/useTheme';
-import { Users, Activity, Zap, TrendingUp, RefreshCw } from 'lucide-react';
-import { collection, getDocs, onSnapshot, query, getDoc, doc } from 'firebase/firestore';
+import { Users, Activity, Zap, TrendingUp } from 'lucide-react';
+import { collection, getDocs, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 
 // 🌀 Spinner
@@ -19,20 +19,30 @@ const Spinner = () => (
   </div>
 );
 
+/* -------------------------------------------------------------------------- */
+/* 🕒 UTC-safe date helpers — fixes timezone drift                            */
+/* -------------------------------------------------------------------------- */
 const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
-const ymdLocal = (d = new Date()) =>
-  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const ymdUTC = (d: Date) => {
+  const yyyy = d.getUTCFullYear();
+  const mm = pad(d.getUTCMonth() + 1);
+  const dd = pad(d.getUTCDate());
+  return `${yyyy}-${mm}-${dd}`;
+};
 
-const lastNDaysLocal = (n: number) => {
+const lastNDaysUTC = (n: number) => {
   const arr: string[] = [];
   const base = new Date();
   for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() - i);
-    arr.push(ymdLocal(d));
+    const d = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate() - i));
+    arr.push(ymdUTC(d));
   }
   return arr;
 };
 
+/* -------------------------------------------------------------------------- */
+/* 📊 Main Component                                                          */
+/* -------------------------------------------------------------------------- */
 const AdminDashboard: React.FC = () => {
   const { theme: globalTheme } = useTheme();
   const theme = useAdminTheme();
@@ -47,14 +57,13 @@ const AdminDashboard: React.FC = () => {
   const [geoData, setGeoData] = React.useState<{ x: number; y: number; value: number; location: string }[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  // 🆕 Filters
+  // 🧭 Filters
   const [filter, setFilter] = React.useState<'7d' | '30d' | 'range'>('7d');
-  const [dateRange, setDateRange] = React.useState<{ from: string; to: string }>({
-    from: '',
-    to: '',
-  });
+  const [dateRange, setDateRange] = React.useState<{ from: string; to: string }>({ from: '', to: '' });
 
-  // 🧩 Firestore
+  /* -------------------------------------------------------------------------- */
+  /* 🔥 Firestore Subscriptions                                                 */
+  /* -------------------------------------------------------------------------- */
   React.useEffect(() => {
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
       setTotalUsers(snap.size);
@@ -67,17 +76,17 @@ const AdminDashboard: React.FC = () => {
         apiMap[docSnap.id] = docSnap.data()?.apiCalls ?? 0;
       });
 
-      const todayKey = ymdLocal();
+      const todayKey = ymdUTC(new Date());
       setApiCallsToday(apiMap[todayKey] ?? 0);
 
-      // Build usageData dynamically
       updateChartData(apiMap);
     });
 
     const fetchStatic = async () => {
       try {
         setIsLoading(true);
-        // --- Category Chart ---
+
+        // --- Category breakdown ---
         const q = query(collection(db, 'queries'));
         const snap = await getDocs(q);
         const counts: Record<string, number> = {};
@@ -86,6 +95,7 @@ const AdminDashboard: React.FC = () => {
           counts[type] = (counts[type] || 0) + 1;
         });
 
+        // top category
         let top = 'N/A';
         let max = 0;
         for (const [type, count] of Object.entries(counts)) {
@@ -96,6 +106,7 @@ const AdminDashboard: React.FC = () => {
         }
         setTopCategory(top);
 
+        // donut data
         const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
         setCategoryData(
           Object.entries(counts).map(([label, value], i) => ({
@@ -105,7 +116,7 @@ const AdminDashboard: React.FC = () => {
           }))
         );
 
-        // --- Geo ---
+        // geo chart
         const userSnap = await getDocs(collection(db, 'users'));
         const geoArr: any[] = [];
         userSnap.forEach((u) => {
@@ -141,21 +152,33 @@ const AdminDashboard: React.FC = () => {
     };
   }, [filter, dateRange]);
 
-  // 🧠 Helper to rebuild chart based on filter
+  /* -------------------------------------------------------------------------- */
+  /* 🧠 Chart Data Updater (UTC aligned)                                        */
+  /* -------------------------------------------------------------------------- */
   const updateChartData = (apiMap: Record<string, number>) => {
     let keys: string[] = [];
 
     if (filter === '7d') {
-      keys = lastNDaysLocal(7);
+      keys = lastNDaysUTC(7);
     } else if (filter === '30d') {
-      keys = lastNDaysLocal(30);
+      keys = lastNDaysUTC(30);
     } else if (filter === 'range' && dateRange.from && dateRange.to) {
       const fromDate = new Date(dateRange.from);
       const toDate = new Date(dateRange.to);
-      const diffDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
-      keys = lastNDaysLocal(diffDays + 1);
+      const diffDays = Math.ceil(
+        (Date.UTC(toDate.getUTCFullYear(), toDate.getUTCMonth(), toDate.getUTCDate()) -
+          Date.UTC(fromDate.getUTCFullYear(), fromDate.getUTCMonth(), fromDate.getUTCDate())) /
+          (1000 * 60 * 60 * 24)
+      );
+      // build range from start→end inclusive
+      const arr: string[] = [];
+      for (let i = 0; i <= diffDays; i++) {
+        const d = new Date(Date.UTC(fromDate.getUTCFullYear(), fromDate.getUTCMonth(), fromDate.getUTCDate() + i));
+        arr.push(ymdUTC(d));
+      }
+      keys = arr;
     } else {
-      keys = lastNDaysLocal(7);
+      keys = lastNDaysUTC(7);
     }
 
     const formatted = keys.map((key) => ({
@@ -169,6 +192,9 @@ const AdminDashboard: React.FC = () => {
     setDateRange((prev) => ({ ...prev, [field]: value }));
   };
 
+  /* -------------------------------------------------------------------------- */
+  /* ⚡ KPIs                                                                    */
+  /* -------------------------------------------------------------------------- */
   const kpiData = [
     { title: 'Total Users', value: isLoading ? <Spinner /> : totalUsers.toLocaleString(), icon: Users, color: 'blue' },
     { title: 'Active Sessions', value: isLoading ? <Spinner /> : activeSessions.toLocaleString(), icon: Activity, color: 'green' },
@@ -176,6 +202,9 @@ const AdminDashboard: React.FC = () => {
     { title: 'Top Category', value: isLoading ? <Spinner /> : topCategory, icon: TrendingUp, color: 'orange' },
   ];
 
+  /* -------------------------------------------------------------------------- */
+  /* 🧩 Render                                                                  */
+  /* -------------------------------------------------------------------------- */
   return (
     <AdminLayout currentPage="dashboard">
       <div className="space-y-8">
@@ -188,53 +217,32 @@ const AdminDashboard: React.FC = () => {
 
         {/* Charts */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* === API Calls Per Day with Filters === */}
+          {/* === API Calls Per Day === */}
           <ChartCard title="API Calls Per Day" isDark={isDark}>
-            {/* Filter Bar */}
+            {/* Filters */}
             <div className="flex flex-wrap items-center justify-between mb-4">
               <div className="flex items-center space-x-2 text-sm">
-                <button
-                  onClick={() => setFilter('7d')}
-                  className={`px-3 py-1 rounded-md border text-xs ${
-                    filter === '7d'
-                      ? isDark
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-blue-500 text-white border-blue-500'
-                      : isDark
-                      ? 'border-slate-700 text-slate-300 hover:bg-slate-700/40'
-                      : 'border-slate-300 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  Past 7 Days
-                </button>
-                <button
-                  onClick={() => setFilter('30d')}
-                  className={`px-3 py-1 rounded-md border text-xs ${
-                    filter === '30d'
-                      ? isDark
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-blue-500 text-white border-blue-500'
-                      : isDark
-                      ? 'border-slate-700 text-slate-300 hover:bg-slate-700/40'
-                      : 'border-slate-300 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  Past Month
-                </button>
-                <button
-                  onClick={() => setFilter('range')}
-                  className={`px-3 py-1 rounded-md border text-xs ${
-                    filter === 'range'
-                      ? isDark
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-blue-500 text-white border-blue-500'
-                      : isDark
-                      ? 'border-slate-700 text-slate-300 hover:bg-slate-700/40'
-                      : 'border-slate-300 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  Date Range
-                </button>
+                {[
+                  { key: '7d', label: 'Past 7 Days' },
+                  { key: '30d', label: 'Past Month' },
+                  { key: 'range', label: 'Date Range' },
+                ].map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setFilter(key as '7d' | '30d' | 'range')}
+                    className={`px-3 py-1 rounded-md border text-xs ${
+                      filter === key
+                        ? isDark
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-blue-500 text-white border-blue-500'
+                        : isDark
+                        ? 'border-slate-700 text-slate-300 hover:bg-slate-700/40'
+                        : 'border-slate-300 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
 
               {filter === 'range' && (
@@ -256,11 +264,10 @@ const AdminDashboard: React.FC = () => {
               )}
             </div>
 
-            {/* Line Chart */}
             <LineChart data={usageData} color="#3B82F6" isDark={isDark} />
           </ChartCard>
 
-          {/* === Popular Categories === */}
+          {/* === Categories === */}
           <ChartCard title="Popular Categories" isDark={isDark}>
             <DonutChart data={categoryData} isDark={isDark} />
           </ChartCard>
