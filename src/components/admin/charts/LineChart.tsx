@@ -1,16 +1,25 @@
-import React from 'react';
+import React from "react";
+import {
+  ResponsiveContainer,
+  LineChart as ReLineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Area,
+  AreaChart,
+} from "recharts";
 
 interface LineChartProps {
   data: { label: string; value: number }[];
   color?: string;
-  height?: number;
   isDark?: boolean;
 }
 
 const LineChart: React.FC<LineChartProps> = ({
   data,
-  color = '#3B82F6',
-  height = 220,
+  color = "#3B82F6",
   isDark = true,
 }) => {
   if (!data || data.length === 0) {
@@ -21,118 +30,81 @@ const LineChart: React.FC<LineChartProps> = ({
     );
   }
 
-  // --- Config ---
-  const width = 370;
-  const padding = { top: 25, right: 10, bottom: 25, left: 10 }; // more top padding for labels
-
-  const chartWidth = width - padding.left - padding.right;
-  const chartHeight = height - padding.top - padding.bottom;
-
-  // --- Scaling ---
-  const maxVal = Math.max(...data.map((d) => d.value));
-  const minVal = Math.min(...data.map((d) => d.value));
-  const yRange = maxVal === minVal ? 1 : maxVal - minVal;
-
-  const stepX = chartWidth / Math.max(1, data.length - 1);
-  const scaleY = (v: number) =>
-    padding.top + (chartHeight - ((v - minVal) / yRange) * chartHeight);
-
-  // --- Points ---
-  const points = data
-    .map((d, i) => `${padding.left + i * stepX},${scaleY(d.value).toFixed(1)}`)
-    .join(' ');
-
-  const textColor = isDark ? '#A1A1AA' : '#4B5563';
-  const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(100,116,139,0.2)';
-
   return (
-    <div className="relative w-full h-full">
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="w-full h-full rounded-lg select-none"
-        style={{ overflow: 'visible' }}
-      >
-        <defs>
-          <linearGradient id="chartLine" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor={color} stopOpacity="0.9" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.4" />
-          </linearGradient>
-        </defs>
+    <div className="w-full h-[280px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart
+          data={data}
+          margin={{ top: 20, right: 20, left: 0, bottom: 40 }}
+        >
+          <defs>
+            <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={color} stopOpacity={0.4} />
+              <stop offset="95%" stopColor={color} stopOpacity={0.05} />
+            </linearGradient>
+          </defs>
 
-        {/* === Grid Lines === */}
-        <g stroke={gridColor} strokeWidth="1">
-          {[0, 0.25, 0.5, 0.75, 1].map((p, i) => {
-            const y = padding.top + chartHeight * p;
-            return <line key={i} x1={padding.left} y1={y} x2={width - padding.right} y2={y} />;
-          })}
-        </g>
+          {/* Grid */}
+          <CartesianGrid
+            stroke={isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
+            vertical={false}
+          />
 
-        {/* === Data Line === */}
-        <polyline
-          fill="none"
-          stroke={color}
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          points={points}
-        />
+          {/* X Axis */}
+          <XAxis
+            dataKey="label"
+            angle={data.length > 10 ? -30 : 0}
+            textAnchor={data.length > 10 ? "end" : "middle"}
+            interval={data.length > 15 ? 2 : 0}
+            tick={{
+              fill: isDark ? "#A1A1AA" : "#4B5563",
+              fontSize: 12,
+            }}
+            height={50}
+          />
 
-        {/* === Data Points + Labels === */}
-        {data.map((d, i) => {
-          const cx = padding.left + i * stepX;
-          const cy = scaleY(d.value);
+          {/* Y Axis */}
+          <YAxis
+            tick={{ fill: isDark ? "#A1A1AA" : "#4B5563", fontSize: 12 }}
+            axisLine={false}
+            tickLine={false}
+            width={40}
+          />
 
-          // Adjust label Y position if too high
-          const labelY = cy < padding.top + 10 ? cy + 15 : cy - 10;
+          {/* Tooltip */}
+          <Tooltip
+            contentStyle={{
+              backgroundColor: isDark ? "#1E293B" : "#F8FAFC",
+              border: "none",
+              borderRadius: "8px",
+              color: isDark ? "#E2E8F0" : "#334155",
+              fontSize: "12px",
+            }}
+            formatter={(value: number) => [`${value} calls`, "API Calls"]}
+          />
 
-          return (
-            <g key={i}>
-              {/* Point */}
-              <circle
-                cx={cx}
-                cy={cy}
-                r="4"
-                fill={color}
-                style={{
-                  transformOrigin: 'center',
-                  transition: 'r 0.15s ease-out, opacity 0.15s ease-out',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.setAttribute('r', '6');
-                  e.currentTarget.setAttribute('opacity', '0.85');
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.setAttribute('r', '4');
-                  e.currentTarget.setAttribute('opacity', '1');
-                }}
-              />
-
-              {/* Value Label */}
-              <text
-                x={cx}
-                y={labelY}
-                textAnchor="middle"
-                fontSize="8"
-                fill={textColor}
-                style={{ pointerEvents: 'none' }}
-              >
-                {d.value}
-              </text>
-
-              {/* Date Label (X-axis) */}
-              <text
-                x={cx}
-                y={height - 5}
-                textAnchor="middle"
-                fontSize="8"
-                fill={textColor}
-              >
-                {d.label}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+          {/* Area Fill */}
+          <Area
+            type="monotone"
+            dataKey="value"
+            stroke={color}
+            fillOpacity={1}
+            fill="url(#colorArea)"
+            strokeWidth={3}
+            dot={{
+              r: 4,
+              strokeWidth: 2,
+              stroke: color,
+              fill: "#fff",
+            }}
+            activeDot={{
+              r: 6,
+              strokeWidth: 0,
+              fill: color,
+            }}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
   );
 };

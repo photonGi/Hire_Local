@@ -8,21 +8,8 @@ import DonutChart from './charts/DonutChart';
 import HeatMap from './charts/HeatMap';
 import { useAdminTheme } from './theme-config';
 import { useTheme } from '../../theme/useTheme';
-import {
-  Users,
-  Activity,
-  Zap,
-  TrendingUp,
-  RefreshCw
-} from 'lucide-react';
-import {
-  collection,
-  getDoc,
-  doc,
-  query,
-  getDocs,
-  onSnapshot
-} from 'firebase/firestore';
+import { Users, Activity, Zap, TrendingUp, RefreshCw } from 'lucide-react';
+import { collection, getDocs, onSnapshot, query, getDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 
 // 🌀 Spinner
@@ -32,10 +19,10 @@ const Spinner = () => (
   </div>
 );
 
-// 🧩 Helpers
 const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 const ymdLocal = (d = new Date()) =>
   `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
 const lastNDaysLocal = (n: number) => {
   const arr: string[] = [];
   const base = new Date();
@@ -60,41 +47,37 @@ const AdminDashboard: React.FC = () => {
   const [geoData, setGeoData] = React.useState<{ x: number; y: number; value: number; location: string }[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  // 🧩 Fetch everything
+  // 🆕 Filters
+  const [filter, setFilter] = React.useState<'7d' | '30d' | 'range'>('7d');
+  const [dateRange, setDateRange] = React.useState<{ from: string; to: string }>({
+    from: '',
+    to: '',
+  });
+
+  // 🧩 Firestore
   React.useEffect(() => {
-    // ✅ Live user count
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
       setTotalUsers(snap.size);
-      setActiveSessions(Math.floor(snap.size * 0.7)); // 70% active session estimate
+      setActiveSessions(Math.floor(snap.size * 0.7));
     });
 
-    // ✅ API Calls (for chart and today)
     const unsubApiCalls = onSnapshot(collection(db, 'apiCalls'), (snap) => {
       const apiMap: Record<string, number> = {};
       snap.forEach((docSnap) => {
         apiMap[docSnap.id] = docSnap.data()?.apiCalls ?? 0;
       });
 
-      // Build last 14 days
-      const days = lastNDaysLocal(5);
-      const formatted = days.map((key) => ({
-        label: new Date(key).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        value: apiMap[key] ?? 0
-      }));
-      setUsageData(formatted);
-
-
-      // Set today's value
       const todayKey = ymdLocal();
       setApiCallsToday(apiMap[todayKey] ?? 0);
+
+      // Build usageData dynamically
+      updateChartData(apiMap);
     });
 
-    // ✅ Top Category + Geo data
     const fetchStatic = async () => {
       try {
         setIsLoading(true);
-
-        // ---- Categories ----
+        // --- Category Chart ---
         const q = query(collection(db, 'queries'));
         const snap = await getDocs(q);
         const counts: Record<string, number> = {};
@@ -103,7 +86,6 @@ const AdminDashboard: React.FC = () => {
           counts[type] = (counts[type] || 0) + 1;
         });
 
-        // Top category
         let top = 'N/A';
         let max = 0;
         for (const [type, count] of Object.entries(counts)) {
@@ -114,16 +96,16 @@ const AdminDashboard: React.FC = () => {
         }
         setTopCategory(top);
 
-        // Donut chart data
         const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
-        const categoryArr = Object.entries(counts).map(([label, value], i) => ({
-          label,
-          value,
-          color: colors[i % colors.length]
-        }));
-        setCategoryData(categoryArr);
+        setCategoryData(
+          Object.entries(counts).map(([label, value], i) => ({
+            label,
+            value,
+            color: colors[i % colors.length],
+          }))
+        );
 
-        // ---- Geo ----
+        // --- Geo ---
         const userSnap = await getDocs(collection(db, 'users'));
         const geoArr: any[] = [];
         userSnap.forEach((u) => {
@@ -157,87 +139,128 @@ const AdminDashboard: React.FC = () => {
       unsubUsers();
       unsubApiCalls();
     };
-  }, []);
+  }, [filter, dateRange]);
 
-  // 📌 KPI cards
+  // 🧠 Helper to rebuild chart based on filter
+  const updateChartData = (apiMap: Record<string, number>) => {
+    let keys: string[] = [];
+
+    if (filter === '7d') {
+      keys = lastNDaysLocal(7);
+    } else if (filter === '30d') {
+      keys = lastNDaysLocal(30);
+    } else if (filter === 'range' && dateRange.from && dateRange.to) {
+      const fromDate = new Date(dateRange.from);
+      const toDate = new Date(dateRange.to);
+      const diffDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
+      keys = lastNDaysLocal(diffDays + 1);
+    } else {
+      keys = lastNDaysLocal(7);
+    }
+
+    const formatted = keys.map((key) => ({
+      label: new Date(key).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      value: apiMap[key] ?? 0,
+    }));
+    setUsageData(formatted);
+  };
+
+  const handleDateChange = (field: 'from' | 'to', value: string) => {
+    setDateRange((prev) => ({ ...prev, [field]: value }));
+  };
+
   const kpiData = [
-    {
-      title: 'Total Users',
-      value: isLoading ? <Spinner /> : totalUsers.toLocaleString(),
-      icon: Users,
-      color: 'blue' as const,
-    },
-    {
-      title: 'Active Sessions',
-      value: isLoading ? <Spinner /> : activeSessions.toLocaleString(),
-      icon: Activity,
-      color: 'green' as const,
-    },
-    {
-      title: 'API Calls Today',
-      value: isLoading ? <Spinner /> : apiCallsToday.toLocaleString(),
-      icon: Zap,
-      color: 'purple' as const,
-    },
-    {
-      title: 'Top Category',
-      value: isLoading ? <Spinner /> : topCategory,
-      icon: TrendingUp,
-      color: 'orange' as const,
-    },
+    { title: 'Total Users', value: isLoading ? <Spinner /> : totalUsers.toLocaleString(), icon: Users, color: 'blue' },
+    { title: 'Active Sessions', value: isLoading ? <Spinner /> : activeSessions.toLocaleString(), icon: Activity, color: 'green' },
+    { title: 'API Calls Today', value: isLoading ? <Spinner /> : apiCallsToday.toLocaleString(), icon: Zap, color: 'purple' },
+    { title: 'Top Category', value: isLoading ? <Spinner /> : topCategory, icon: TrendingUp, color: 'orange' },
   ];
-
-  const handleRefresh = () => window.location.reload();
 
   return (
     <AdminLayout currentPage="dashboard">
       <div className="space-y-8">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-          <div>
-            <h1 className={`text-3xl font-bold ${theme.primaryText}`}>Dashboard Overview</h1>
-            <p className={`${theme.secondaryText} mt-1`}>
-              Monitor your platform's performance and user activity
-            </p>
-          </div>
-
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={handleRefresh}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
-                isDark
-                  ? 'bg-white/10 border border-white/20 text-white hover:bg-white/20'
-                  : 'bg-white/80 border border-slate-300 text-slate-700 hover:bg-white hover:shadow-md shadow-sm'
-              }`}
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span>Refresh</span>
-            </button>
-            <div className={`text-xs ${theme.secondaryText}`}>
-              Last updated: {new Date().toLocaleTimeString()}
-            </div>
-          </div>
-        </div>
-
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           {kpiData.map((kpi, i) => (
-            <KPICard
-              key={i}
-              title={kpi.title}
-              value={kpi.value}
-              icon={kpi.icon}
-              color={kpi.color}
-              isDark={isDark}
-            />
+            <KPICard key={i} title={kpi.title} value={kpi.value} icon={kpi.icon} color={kpi.color} isDark={isDark} />
           ))}
         </div>
 
         {/* Charts */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* === API Calls Per Day with Filters === */}
           <ChartCard title="API Calls Per Day" isDark={isDark}>
+            {/* Filter Bar */}
+            <div className="flex flex-wrap items-center justify-between mb-4">
+              <div className="flex items-center space-x-2 text-sm">
+                <button
+                  onClick={() => setFilter('7d')}
+                  className={`px-3 py-1 rounded-md border text-xs ${
+                    filter === '7d'
+                      ? isDark
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-blue-500 text-white border-blue-500'
+                      : isDark
+                      ? 'border-slate-700 text-slate-300 hover:bg-slate-700/40'
+                      : 'border-slate-300 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  Past 7 Days
+                </button>
+                <button
+                  onClick={() => setFilter('30d')}
+                  className={`px-3 py-1 rounded-md border text-xs ${
+                    filter === '30d'
+                      ? isDark
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-blue-500 text-white border-blue-500'
+                      : isDark
+                      ? 'border-slate-700 text-slate-300 hover:bg-slate-700/40'
+                      : 'border-slate-300 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  Past Month
+                </button>
+                <button
+                  onClick={() => setFilter('range')}
+                  className={`px-3 py-1 rounded-md border text-xs ${
+                    filter === 'range'
+                      ? isDark
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-blue-500 text-white border-blue-500'
+                      : isDark
+                      ? 'border-slate-700 text-slate-300 hover:bg-slate-700/40'
+                      : 'border-slate-300 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  Date Range
+                </button>
+              </div>
+
+              {filter === 'range' && (
+                <div className="flex items-center space-x-2 text-xs mt-2 xl:mt-0">
+                  <input
+                    type="date"
+                    value={dateRange.from}
+                    onChange={(e) => handleDateChange('from', e.target.value)}
+                    className="px-2 py-1 rounded-md border border-slate-300 text-slate-700 text-xs"
+                  />
+                  <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>to</span>
+                  <input
+                    type="date"
+                    value={dateRange.to}
+                    onChange={(e) => handleDateChange('to', e.target.value)}
+                    className="px-2 py-1 rounded-md border border-slate-300 text-slate-700 text-xs"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Line Chart */}
             <LineChart data={usageData} color="#3B82F6" isDark={isDark} />
           </ChartCard>
+
+          {/* === Popular Categories === */}
           <ChartCard title="Popular Categories" isDark={isDark}>
             <DonutChart data={categoryData} isDark={isDark} />
           </ChartCard>
