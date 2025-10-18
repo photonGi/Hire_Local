@@ -1,130 +1,134 @@
-import React from 'react';
-import { themeClass } from '../theme-config';
+import React, { useEffect, useState } from "react";
+import { themeClass } from "../theme-config";
 
 interface DonutChartProps {
   data: { label: string; value: number; color: string }[];
   isDark?: boolean;
+  filter?: "7d" | "30d" | "range";
+  dateRange?: { from: string; to: string };
 }
 
-const DonutChart: React.FC<DonutChartProps> = ({ data, isDark = true }) => {
-  const total = data.reduce((sum, item) => sum + item.value, 0);
+const DonutChart: React.FC<DonutChartProps> = ({
+  data,
+  isDark = true,
+  filter = "7d",
+  dateRange,
+}) => {
+  const [animatedData, setAnimatedData] = useState(data);
+  useEffect(() => {
+    const timeout = setTimeout(() => setAnimatedData(data), 150);
+    return () => clearTimeout(timeout);
+  }, [data, filter, dateRange]);
+
+  const total = data.reduce((s, d) => s + d.value, 0);
+  const topCategory =
+    data.reduce(
+      (p, c) => (c.value > p.value ? c : p),
+      data[0] || { label: "N/A", value: 0 }
+    )?.label || "N/A";
+
+  const getLabelText = () => {
+    if (filter === "7d") return "Past 7 Days";
+    if (filter === "30d") return "Past Month";
+    if (filter === "range" && dateRange?.from && dateRange?.to)
+      return `${dateRange.from} → ${dateRange.to}`;
+    return "";
+  };
+
   let currentAngle = 0;
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center p-4 max-w-full max-h-full overflow-hidden">
-      <div className="relative w-48 h-48 max-w-full max-h-[70%] flex-shrink-0">
-        {/* SVG Chart */}
-        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
-          {/* === DARK THEME CHART === */}
-          {isDark && (
-            <>
+    <div className="flex flex-col items-center justify-center w-full p-4">
+      {/* Donut */}
+      <div className="relative aspect-square w-60 flex items-center justify-center">
+        <svg
+          className="absolute w-full h-full transform -rotate-90"
+          viewBox="0 0 200 200"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          <circle
+            cx="100"
+            cy="100"
+            r="70"
+            fill="none"
+            stroke={
+              isDark ? "rgba(255,255,255,0.1)" : "rgba(148,163,184,0.3)"
+            }
+            strokeWidth="16"
+          />
+          {animatedData.map((item, i) => {
+            const pct = total > 0 ? (item.value / total) * 100 : 0;
+            const dash = `${pct * 4.4} 440`;
+            const offset = -currentAngle * 4.4;
+            currentAngle += pct;
+            return (
               <circle
+                key={i}
                 cx="100"
                 cy="100"
                 r="70"
                 fill="none"
-                stroke="rgba(255,255,255,0.1)"
-                strokeWidth="16"
+                stroke={item.color}
+                strokeWidth="16" // same width for all
+                strokeDasharray={dash}
+                strokeDashoffset={offset}
+                strokeLinecap="round"
+                className="transition-all duration-500 ease-out hover:opacity-80"
               />
-              
-              {data.map((item, index) => {
-                const percentage = (item.value / total) * 100;
-                const strokeDasharray = `${percentage * 4.4} 440`;
-                const strokeDashoffset = -currentAngle * 4.4;
-                currentAngle += percentage;
-                
-                return (
-                  <circle
-                    key={index}
-                    cx="100"
-                    cy="100"
-                    r="70"
-                    fill="none"
-                    stroke={item.color}
-                    strokeWidth="16"
-                    strokeDasharray={strokeDasharray}
-                    strokeDashoffset={strokeDashoffset}
-                    className="transition-all duration-300"
-                    strokeLinecap="round"
-                  />
-                );
-              })}
-            </>
-          )}
-          
-          {/* === LIGHT THEME CHART === */}
-          {!isDark && (
-            <>
-              <defs>
-                <filter id="donutShadow">
-                  <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="rgba(0,0,0,0.15)"/>
-                </filter>
-              </defs>
-              
-              <circle
-                cx="100"
-                cy="100"
-                r="70"
-                fill="none"
-                stroke="rgba(148,163,184,0.3)"
-                strokeWidth="16"
-              />
-              
-              {data.map((item, index) => {
-                const percentage = (item.value / total) * 100;
-                const strokeDasharray = `${percentage * 4.4} 440`;
-                const strokeDashoffset = -currentAngle * 4.4;
-                currentAngle += percentage;
-                
-                return (
-                  <circle
-                    key={index}
-                    cx="100"
-                    cy="100"
-                    r="70"
-                    fill="none"
-                    stroke={item.color}
-                    strokeWidth="16"
-                    strokeDasharray={strokeDasharray}
-                    strokeDashoffset={strokeDashoffset}
-                    className="transition-all duration-300"
-                    strokeLinecap="round"
-                    filter="url(#donutShadow)"
-                  />
-                );
-              })}
-            </>
-          )}
+            );
+          })}
         </svg>
-        
-        {/* Center Content */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <div className={`text-xl font-bold ${themeClass(isDark, 'text-white', 'text-slate-800')}`}>
-              {total}
-            </div>
-            <div className={`text-xs ${themeClass(isDark, 'text-gray-400', 'text-slate-600')}`}>
-              Total
-            </div>
-          </div>
+
+        {/* Center text */}
+        <div className="absolute flex flex-col items-center text-center">
+          <span
+            className={`text-base font-semibold ${themeClass(
+              isDark,
+              "text-white",
+              "text-slate-800"
+            )}`}
+          >
+            {topCategory}
+          </span>
+          <span
+            className={`text-xs ${themeClass(
+              isDark,
+              "text-gray-400",
+              "text-slate-600"
+            )}`}
+          >
+            Most Popular
+          </span>
+          {getLabelText() && (
+            <span
+              className={`text-[10px] mt-1 ${themeClass(
+                isDark,
+                "text-gray-500",
+                "text-slate-500"
+              )}`}
+            >
+              {getLabelText()}
+            </span>
+          )}
         </div>
       </div>
-      
+
       {/* Legend */}
-      <div className="mt-4 w-full max-w-full">
-        <div className="grid grid-cols-2 gap-2 text-center">
-          {data.map((item, index) => (
-            <div key={index} className="flex items-center justify-center space-x-2 min-w-0">
-              <div 
-                className={`w-2 h-2 rounded-full flex-shrink-0 ${!isDark ? 'shadow-sm' : ''}`}
-                style={{ backgroundColor: item.color }}
-              />
-              <span className={`text-xs ${themeClass(isDark, 'text-gray-400', 'text-slate-600')} truncate`}>
-                {item.label} ({Math.round((item.value / total) * 100)}%)
-              </span>
-            </div>
-          ))}
-        </div>
+      <div className="w-full grid grid-cols-3 gap-y-2 justify-items-center mt-0">
+        {animatedData.map((item, i) => (
+          <div key={i} className="flex items-center space-x-1 text-xs truncate">
+            <div
+              className="w-2.5 h-2.5 rounded-full"
+              style={{ backgroundColor: item.color }}
+            ></div>
+            <span
+              className={themeClass(isDark, "text-gray-300", "text-slate-700")}
+            >
+              {item.label} (
+              {total > 0 ? Math.round((item.value / total) * 100) : 0}%)
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );

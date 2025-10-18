@@ -17,6 +17,9 @@ import { getThemeStyles, themeClass } from './theme-config';
 import UnifiedThemeToggle from '../shared/UnifiedThemeToggle';
 import { useTheme } from '../../theme/useTheme';
 import { Link } from 'react-router-dom';
+import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import { db } from "../../firebase/config";
+
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -40,6 +43,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [notifications, setNotifications] = useState<{id: string; name: string; message: string, time: string }[]>([]);
   
   const { theme: globalTheme } = useTheme();
   const isDark = globalTheme === 'dark';
@@ -52,11 +56,42 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
     { id: 'settings', label: 'Settings', icon: Settings, path: '/admin/settings' },
   ];
 
-  const notifications = [
-    { id: 1, message: 'New user registration', time: '2 minutes ago', type: 'info' },
-    { id: 2, message: 'High API usage detected', time: '5 minutes ago', type: 'warning' },
-    { id: 3, message: 'Provider verification pending', time: '10 minutes ago', type: 'info' },
-  ];
+  
+
+React.useEffect(() => {
+  const usersQuery = query(collection(db, "users"), orderBy("createdAt", "desc"));
+
+  const unsubscribe = onSnapshot(usersQuery, (snapshot) => {
+    const userData = snapshot.docs.map((doc) => {
+      const data = doc.data();
+
+      const timestamp = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
+
+      const timeAgo = (() => {
+        const now = new Date();
+        const diffMs = now.getTime() - timestamp.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) return "Just now";
+        if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`;
+        const diffHrs = Math.floor(diffMins / 60);
+        if (diffHrs < 24) return `${diffHrs} hour${diffHrs > 1 ? "s" : ""} ago`;
+        const diffDays = Math.floor(diffHrs / 24);
+        return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+      })();
+
+      return {
+        id: doc.id,
+        name: data.name || "New User",
+        message: "Registered an account.",
+        time: timeAgo,
+      };
+    });
+    setNotifications(userData);
+  });
+
+  return () => unsubscribe();
+}, []);
+
 
   const handleMenuClick = (path: string) => {
     navigate(path);
@@ -212,7 +247,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
                     <div className="max-h-64 overflow-y-auto">
                       {notifications.map((notification) => (
                         <div key={notification.id} className={`p-4 border-b ${theme.divider} ${themeClass(isDark, 'hover:bg-white/5', 'hover:bg-slate-50')}`}>
-                          <p className={`${theme.primaryText} text-sm`}>{notification.message}</p>
+                          <p className={`${theme.primaryText} text-sm`}>{`${notification.name} ${notification.message}`}</p>
                           <p className={`${theme.secondaryText} text-xs mt-1`}>{notification.time}</p>
                         </div>
                       ))}

@@ -57,9 +57,16 @@ const AdminDashboard: React.FC = () => {
   const [geoData, setGeoData] = React.useState<{ x: number; y: number; value: number; location: string }[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  // 🧭 Filters
+  // 🧭 Filters for API Calls
   const [filter, setFilter] = React.useState<'7d' | '30d' | 'range'>('7d');
   const [dateRange, setDateRange] = React.useState<{ from: string; to: string }>({ from: '', to: '' });
+
+  // 🧭 Separate Filters for Popular Categories
+  const [categoryFilter, setCategoryFilter] = React.useState<'7d' | '30d' | 'range'>('7d');
+  const [categoryDateRange, setCategoryDateRange] = React.useState<{ from: string; to: string }>({
+    from: '',
+    to: '',
+  });
 
   /* -------------------------------------------------------------------------- */
   /* 🔥 Firestore Subscriptions                                                 */
@@ -86,48 +93,83 @@ const AdminDashboard: React.FC = () => {
       try {
         setIsLoading(true);
 
-        // --- Category breakdown ---
-        const q = query(collection(db, 'queries'));
+        const q = query(collection(db, "queries"));
         const snap = await getDocs(q);
+
         const counts: Record<string, number> = {};
+        const overallCounts: Record<string, number> = {};
+        const now = new Date();
+
         snap.forEach((d) => {
-          const type = d.data().serviceType || 'Other';
-          counts[type] = (counts[type] || 0) + 1;
+          const data = d.data();
+          const type = data.serviceType || "Other";
+          const createdAt = data.createdAt?.toDate
+            ? data.createdAt.toDate()
+            : new Date(data.createdAt || Date.now());
+
+          // always track overall
+          overallCounts[type] = (overallCounts[type] || 0) + 1;
+
+          // include based on current category filter
+          let include = false;
+          if (categoryFilter === "7d") {
+            const sevenDaysAgo = new Date(now);
+            sevenDaysAgo.setDate(now.getDate() - 7);
+            include = createdAt >= sevenDaysAgo && createdAt <= now;
+          } else if (categoryFilter === "30d") {
+            const thirtyDaysAgo = new Date(now);
+            thirtyDaysAgo.setDate(now.getDate() - 30);
+            include = createdAt >= thirtyDaysAgo && createdAt <= now;
+          } else if (
+            categoryFilter === "range" &&
+            categoryDateRange.from &&
+            categoryDateRange.to
+          ) {
+            const from = new Date(categoryDateRange.from);
+            const to = new Date(categoryDateRange.to);
+            include = createdAt >= from && createdAt <= to;
+          } else include = true;
+
+          if (include) counts[type] = (counts[type] || 0) + 1;
         });
 
-        // top category
-        let top = 'N/A';
-        let max = 0;
-        for (const [type, count] of Object.entries(counts)) {
-          if (count > max) {
-            max = count;
-            top = type;
+        // 🔹 set overall top category once — not tied to filters
+        let topOverall = "N/A";
+        let maxOverall = 0;
+        for (const [type, val] of Object.entries(overallCounts)) {
+          if (val > maxOverall) {
+            maxOverall = val;
+            topOverall = type;
           }
         }
-        setTopCategory(top);
+        setTopCategory(topOverall);
 
-        // donut data
-        const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
-        setCategoryData(
-          Object.entries(counts).map(([label, value], i) => ({
-            label,
-            value,
-            color: colors[i % colors.length],
-          }))
-        );
+        // 🔹 take only top 3 for donut
+        const sorted = Object.entries(counts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3);
 
-        // geo chart
-        const userSnap = await getDocs(collection(db, 'users'));
+        const colors = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
+        const categoryArr = sorted.map(([label, value], i) => ({
+          label,
+          value,
+          color: colors[i % colors.length],
+        }));
+
+        setCategoryData(categoryArr);
+
+        // 🌍 geo chart unchanged
+        const userSnap = await getDocs(collection(db, "users"));
         const geoArr: any[] = [];
         userSnap.forEach((u) => {
           const data = u.data();
           if (data.location) {
             const label =
-              typeof data.location === 'string'
+              typeof data.location === "string"
                 ? data.location
                 : data.location.city
-                ? `${data.location.city}, ${data.location.state || ''}`.trim()
-                : data.location.fullAddress || 'Unknown';
+                ? `${data.location.city}, ${data.location.state || ""}`.trim()
+                : data.location.fullAddress || "Unknown";
             geoArr.push({
               x: Math.random() * 100,
               y: Math.random() * 100,
@@ -138,11 +180,13 @@ const AdminDashboard: React.FC = () => {
         });
         setGeoData(geoArr);
       } catch (err) {
-        console.error('Dashboard fetch error:', err);
+        console.error("Dashboard fetch error:", err);
       } finally {
         setIsLoading(false);
       }
     };
+
+
 
     fetchStatic();
 
@@ -150,7 +194,7 @@ const AdminDashboard: React.FC = () => {
       unsubUsers();
       unsubApiCalls();
     };
-  }, [filter, dateRange]);
+  }, [filter, dateRange, categoryFilter, categoryDateRange]); // ✅ Added category filters dependency
 
   /* -------------------------------------------------------------------------- */
   /* 🧠 Chart Data Updater (UTC aligned)                                        */
@@ -170,7 +214,6 @@ const AdminDashboard: React.FC = () => {
           Date.UTC(fromDate.getUTCFullYear(), fromDate.getUTCMonth(), fromDate.getUTCDate())) /
           (1000 * 60 * 60 * 24)
       );
-      // build range from start→end inclusive
       const arr: string[] = [];
       for (let i = 0; i <= diffDays; i++) {
         const d = new Date(Date.UTC(fromDate.getUTCFullYear(), fromDate.getUTCMonth(), fromDate.getUTCDate() + i));
@@ -190,6 +233,10 @@ const AdminDashboard: React.FC = () => {
 
   const handleDateChange = (field: 'from' | 'to', value: string) => {
     setDateRange((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleCategoryDateChange = (field: 'from' | 'to', value: string) => {
+    setCategoryDateRange((prev) => ({ ...prev, [field]: value }));
   };
 
   /* -------------------------------------------------------------------------- */
@@ -267,9 +314,59 @@ const AdminDashboard: React.FC = () => {
             <LineChart data={usageData} color="#3B82F6" isDark={isDark} />
           </ChartCard>
 
-          {/* === Categories === */}
+          {/* === Categories (with independent filters) === */}
           <ChartCard title="Popular Categories" isDark={isDark}>
-            <DonutChart data={categoryData} isDark={isDark} />
+            {/* Filters */}
+            <div className="flex flex-wrap items-center justify-between mb-4">
+              <div className="flex items-center space-x-2 text-sm">
+                {[
+                  { key: '7d', label: 'Past 7 Days' },
+                  { key: '30d', label: 'Past Month' },
+                  { key: 'range', label: 'Date Range' },
+                ].map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setCategoryFilter(key as '7d' | '30d' | 'range')}
+                    className={`px-3 py-1 rounded-md border text-xs ${
+                      categoryFilter === key
+                        ? isDark
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-blue-500 text-white border-blue-500'
+                        : isDark
+                        ? 'border-slate-700 text-slate-300 hover:bg-slate-700/40'
+                        : 'border-slate-300 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {categoryFilter === 'range' && (
+                <div className="flex items-center space-x-2 text-xs mt-2 xl:mt-0">
+                  <input
+                    type="date"
+                    value={categoryDateRange.from}
+                    onChange={(e) => handleCategoryDateChange('from', e.target.value)}
+                    className="px-2 py-1 rounded-md border border-slate-300 text-slate-700 text-xs"
+                  />
+                  <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>to</span>
+                  <input
+                    type="date"
+                    value={categoryDateRange.to}
+                    onChange={(e) => handleCategoryDateChange('to', e.target.value)}
+                    className="px-2 py-1 rounded-md border border-slate-300 text-slate-700 text-xs"
+                  />
+                </div>
+              )}
+            </div>
+
+            <DonutChart
+              data={categoryData}
+              isDark={isDark}
+              filter={categoryFilter}
+              dateRange={categoryDateRange}
+            />
           </ChartCard>
         </div>
 
