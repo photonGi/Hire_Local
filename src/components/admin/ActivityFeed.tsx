@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { getThemeStyles, themeClass } from './theme-config';
+import { Link } from 'react-router-dom';
 
 interface ActivityItem {
   id: string;
@@ -128,9 +129,9 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({
         <h3 className={`text-lg font-semibold ${theme.primaryText}`}>
           Recent Activity
         </h3>
-        <button className={`${theme.accentText} hover:opacity-80 text-sm`}>
+        <Link to="/admin/search-logs" className={`${theme.accentText} hover:opacity-80 text-sm`}>
           View All
-        </button>
+        </Link>
       </div>
 
       {isLoading ? (

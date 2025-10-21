@@ -56,6 +56,7 @@ const AdminDashboard: React.FC = () => {
   const [categoryData, setCategoryData] = React.useState<{ label: string; value: number; color: string }[]>([]);
   const [geoData, setGeoData] = React.useState<{ x: number; y: number; value: number; location: string }[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isCardLoading, setIsCardLoading] = React.useState(true);
 
   // 🧭 Filters for API Calls
   const [filter, setFilter] = React.useState<'7d' | '30d' | 'range'>('7d');
@@ -68,134 +69,133 @@ const AdminDashboard: React.FC = () => {
     to: '',
   });
 
-  /* -------------------------------------------------------------------------- */
-  /* 🔥 Firestore Subscriptions                                                 */
-  /* -------------------------------------------------------------------------- */
-  React.useEffect(() => {
-    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
-      setTotalUsers(snap.size);
-      setActiveSessions(Math.floor(snap.size * 0.7));
+ /* -------------------------------------------------------------------------- */
+/* 🔥 Firestore Subscriptions + Data Loading                                  */
+/* -------------------------------------------------------------------------- */
+React.useEffect(() => {
+  const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
+    setTotalUsers(snap.size);
+    setActiveSessions(Math.floor(snap.size * 0.7));
+  });
+
+  const unsubApiCalls = onSnapshot(collection(db, 'apiCalls'), (snap) => {
+    const apiMap: Record<string, number> = {};
+    snap.forEach((docSnap) => {
+      apiMap[docSnap.id] = docSnap.data()?.apiCalls ?? 0;
     });
 
-    const unsubApiCalls = onSnapshot(collection(db, 'apiCalls'), (snap) => {
-      const apiMap: Record<string, number> = {};
-      snap.forEach((docSnap) => {
-        apiMap[docSnap.id] = docSnap.data()?.apiCalls ?? 0;
+    const todayKey = ymdUTC(new Date());
+    setApiCallsToday(apiMap[todayKey] ?? 0);
+
+    updateChartData(apiMap);
+  });
+
+  const fetchStatic = async () => {
+    try {
+      // ✅ only set card loading true the first time
+      if (isCardLoading) setIsCardLoading(true);
+      setIsLoading(true);
+
+      const q = query(collection(db, "queries"));
+      const snap = await getDocs(q);
+
+      const counts: Record<string, number> = {};
+      const overallCounts: Record<string, number> = {};
+      const now = new Date();
+
+      snap.forEach((d) => {
+        const data = d.data();
+        const type = data.serviceType || "Other";
+        const createdAt = data.createdAt?.toDate
+          ? data.createdAt.toDate()
+          : new Date(data.createdAt || Date.now());
+
+        // track all for KPI
+        overallCounts[type] = (overallCounts[type] || 0) + 1;
+
+        // include based on category filter
+        let include = false;
+        if (categoryFilter === "7d") {
+          const sevenDaysAgo = new Date(now);
+          sevenDaysAgo.setDate(now.getDate() - 7);
+          include = createdAt >= sevenDaysAgo && createdAt <= now;
+        } else if (categoryFilter === "30d") {
+          const thirtyDaysAgo = new Date(now);
+          thirtyDaysAgo.setDate(now.getDate() - 30);
+          include = createdAt >= thirtyDaysAgo && createdAt <= now;
+        } else if (
+          categoryFilter === "range" &&
+          categoryDateRange.from &&
+          categoryDateRange.to
+        ) {
+          const from = new Date(categoryDateRange.from);
+          const to = new Date(categoryDateRange.to);
+          include = createdAt >= from && createdAt <= to;
+        } else include = true;
+
+        if (include) counts[type] = (counts[type] || 0) + 1;
       });
 
-      const todayKey = ymdUTC(new Date());
-      setApiCallsToday(apiMap[todayKey] ?? 0);
-
-      updateChartData(apiMap);
-    });
-
-    const fetchStatic = async () => {
-      try {
-        setIsLoading(true);
-
-        const q = query(collection(db, "queries"));
-        const snap = await getDocs(q);
-
-        const counts: Record<string, number> = {};
-        const overallCounts: Record<string, number> = {};
-        const now = new Date();
-
-        snap.forEach((d) => {
-          const data = d.data();
-          const type = data.serviceType || "Other";
-          const createdAt = data.createdAt?.toDate
-            ? data.createdAt.toDate()
-            : new Date(data.createdAt || Date.now());
-
-          // always track overall
-          overallCounts[type] = (overallCounts[type] || 0) + 1;
-
-          // include based on current category filter
-          let include = false;
-          if (categoryFilter === "7d") {
-            const sevenDaysAgo = new Date(now);
-            sevenDaysAgo.setDate(now.getDate() - 7);
-            include = createdAt >= sevenDaysAgo && createdAt <= now;
-          } else if (categoryFilter === "30d") {
-            const thirtyDaysAgo = new Date(now);
-            thirtyDaysAgo.setDate(now.getDate() - 30);
-            include = createdAt >= thirtyDaysAgo && createdAt <= now;
-          } else if (
-            categoryFilter === "range" &&
-            categoryDateRange.from &&
-            categoryDateRange.to
-          ) {
-            const from = new Date(categoryDateRange.from);
-            const to = new Date(categoryDateRange.to);
-            include = createdAt >= from && createdAt <= to;
-          } else include = true;
-
-          if (include) counts[type] = (counts[type] || 0) + 1;
-        });
-
-        // 🔹 set overall top category once — not tied to filters
-        let topOverall = "N/A";
-        let maxOverall = 0;
-        for (const [type, val] of Object.entries(overallCounts)) {
-          if (val > maxOverall) {
-            maxOverall = val;
-            topOverall = type;
-          }
+      // 🔹 set top category (KPI)
+      let topOverall = "N/A";
+      let maxOverall = 0;
+      for (const [type, val] of Object.entries(overallCounts)) {
+        if (val > maxOverall) {
+          maxOverall = val;
+          topOverall = type;
         }
-        setTopCategory(topOverall);
-
-        // 🔹 take only top 3 for donut
-        const sorted = Object.entries(counts)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 3);
-
-        const colors = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
-        const categoryArr = sorted.map(([label, value], i) => ({
-          label,
-          value,
-          color: colors[i % colors.length],
-        }));
-
-        setCategoryData(categoryArr);
-
-        // 🌍 geo chart unchanged
-        const userSnap = await getDocs(collection(db, "users"));
-        const geoArr: any[] = [];
-        userSnap.forEach((u) => {
-          const data = u.data();
-          if (data.location) {
-            const label =
-              typeof data.location === "string"
-                ? data.location
-                : data.location.city
-                ? `${data.location.city}, ${data.location.state || ""}`.trim()
-                : data.location.fullAddress || "Unknown";
-            geoArr.push({
-              x: Math.random() * 100,
-              y: Math.random() * 100,
-              value: Math.floor(Math.random() * 1000),
-              location: label,
-            });
-          }
-        });
-        setGeoData(geoArr);
-      } catch (err) {
-        console.error("Dashboard fetch error:", err);
-      } finally {
-        setIsLoading(false);
       }
-    };
+      setTopCategory(topOverall);
 
+      // 🔹 take only top 3 for donut
+      const sorted = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
 
+      const colors = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
+      const categoryArr = sorted.map(([label, value], i) => ({
+        label,
+        value,
+        color: colors[i % colors.length],
+      }));
 
-    fetchStatic();
+      setCategoryData(categoryArr);
 
-    return () => {
-      unsubUsers();
-      unsubApiCalls();
-    };
-  }, [filter, dateRange, categoryFilter, categoryDateRange]); // ✅ Added category filters dependency
+      // 🌍 geo chart unchanged
+      const querySnap = await getDocs(collection(db, "queries"));
+      const locationCounts: Record<string, number> = {};
 
+      querySnap.forEach((doc) => {
+        const data = doc.data();
+        const loc = data.location?.city || data.location || "Unknown";
+        locationCounts[loc] = (locationCounts[loc] || 0) + 1;
+      });
+
+      const geoArr = Object.entries(locationCounts).map(([location, value]) => ({
+        location,
+        value,
+        x: Math.random() * 100, // temporary until coordinates are mapped properly
+        y: Math.random() * 100,
+      }));
+
+      setGeoData(geoArr);
+
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
+    } finally {
+      setIsLoading(false);
+      // ✅ only disable card loading once, permanently
+      if (isCardLoading) setIsCardLoading(false);
+    }
+  };
+
+  fetchStatic();
+
+  return () => {
+    unsubUsers();
+    unsubApiCalls();
+  };
+}, [filter, dateRange, categoryFilter, categoryDateRange]);
   /* -------------------------------------------------------------------------- */
   /* 🧠 Chart Data Updater (UTC aligned)                                        */
   /* -------------------------------------------------------------------------- */
@@ -243,10 +243,10 @@ const AdminDashboard: React.FC = () => {
   /* ⚡ KPIs                                                                    */
   /* -------------------------------------------------------------------------- */
   const kpiData = [
-    { title: 'Total Users', value: isLoading ? <Spinner /> : totalUsers.toLocaleString(), icon: Users, color: 'blue' },
-    { title: 'Active Sessions', value: isLoading ? <Spinner /> : activeSessions.toLocaleString(), icon: Activity, color: 'green' },
-    { title: 'API Calls Today', value: isLoading ? <Spinner /> : apiCallsToday.toLocaleString(), icon: Zap, color: 'purple' },
-    { title: 'Top Category', value: isLoading ? <Spinner /> : topCategory, icon: TrendingUp, color: 'orange' },
+    { title: 'Total Users', value: isCardLoading ? <Spinner /> : totalUsers.toLocaleString(), icon: Users, color: 'blue' },
+    { title: 'Active Sessions', value: isCardLoading ? <Spinner /> : activeSessions.toLocaleString(), icon: Activity, color: 'green' },
+    { title: 'API Calls Today', value: isCardLoading ? <Spinner /> : apiCallsToday.toLocaleString(), icon: Zap, color: 'purple' },
+    { title: 'Top Category', value: isCardLoading ? <Spinner /> : topCategory, icon: TrendingUp, color: 'orange' },
   ];
 
   /* -------------------------------------------------------------------------- */

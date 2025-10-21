@@ -208,7 +208,7 @@ React.useEffect(() => {
       {/* Main Content */}
       <div className="lg:ml-64">
         {/* Top Navigation */}
-        <header className={`${theme.headerBackground} ${theme.border} border-b px-4 lg:px-6 py-4 relative z-[200] pointer-events-auto`}>
+        <header className={`${theme.headerBackground} ${theme.border} border-b pl-4 lg:pl-6 pr-[5rem] py-4 relative z-[200] pointer-events-auto`}>
           <div className="flex items-center justify-between">
             {/* Mobile Menu Button */}
             <button
@@ -252,11 +252,7 @@ React.useEffect(() => {
                         </div>
                       ))}
                     </div>
-                    <div className={`p-3 border-t ${theme.border}`}>
-                      <button className={`${theme.accentText} text-sm hover:opacity-80`}>
-                        View all notifications
-                      </button>
-                    </div>
+                    
                   </div>
                 )}
               </div>
