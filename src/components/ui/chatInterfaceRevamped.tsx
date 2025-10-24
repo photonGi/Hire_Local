@@ -291,7 +291,7 @@ const EnhancedLocationModal: React.FC<{
                 type="text"
                 value={customLocation}
                 onChange={(e) => setCustomLocation(e.target.value)}
-                placeholder="e.g., Downtown Lahore, Pakistan"
+                placeholder="e.g., Downtown, USA"
                 className={themeClasses.input}
                 onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
               />
@@ -588,22 +588,30 @@ const MessageBubbleComponent: React.FC<MessageBubbleProps> = ({ m, onSuggestionS
         </AnimatePresence> */}
 
         <AnimatePresence>
-          {m.providers && isTypingComplete && (
-            <motion.div
-              key={`providers-${m.id}`}
-              className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-              initial="hidden"
-              animate="visible"
-              variants={{
-                visible: { transition: { staggerChildren: 0.1, delayChildren: 0.2 } },
-              }}
-            >
-              {m.providers.slice(0, visibleProviders).map((p, idx) => (
-                <ProviderCard key={p.name ?? idx} provider={p} theme={theme} />
-              ))}
-            </motion.div>
-          )}
+          {m.providers &&
+            isTypingComplete &&
+            m.providers.filter(p => p.confidence?.toLowerCase() !== "low").length > 0 && (
+              <motion.div
+                key={`providers-${m.id}`}
+                className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  visible: {
+                    transition: { staggerChildren: 0.1, delayChildren: 0.2 },
+                  },
+                }}
+              >
+                {m.providers
+                  .filter(p => p.confidence?.toLowerCase() !== "low")
+                  .slice(0, visibleProviders)
+                  .map((p, idx) => (
+                    <ProviderCard key={p.name ?? idx} provider={p} theme={theme} />
+                  ))}
+              </motion.div>
+            )}
         </AnimatePresence>
+
 
         {m.providers && m.providers.length > visibleProviders && (
           <div className="w-full flex justify-center">
