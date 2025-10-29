@@ -25,6 +25,7 @@ import { AdminProtectedRoute } from './components/AdminProtectedRoute'
 import UserList from './components/admin/UserList'
 import SearchLogs from './components/admin/SearchLogs'
 import AdminSettings from './components/admin/AdminSettings'
+import TermsOfServices from './components/TermsOfServices'
 
 function App() {
   return (
@@ -57,6 +58,7 @@ function App() {
               <Route path="/support" element={<ComingSoonScreen />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/user-data-deletion" element={<DataDeletion />} />
+              <Route path="/terms-of-service" element={<TermsOfServices />} />
               
               {/* Admin Routes - These will get their own protection later */}
               <Route path="/admin/login" element={<AdminLogin />} />

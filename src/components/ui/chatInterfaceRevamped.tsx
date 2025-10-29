@@ -419,7 +419,7 @@ const ProviderCard: React.FC<{ provider: Provider; theme: "light" | "dark" }> = 
           name: provider.name,
           description: provider.details || '',
           category: 'service', // Default category
-          services: [],
+          service: provider.service,
           location: {
             address: provider.address || '',
           },
@@ -431,6 +431,7 @@ const ProviderCard: React.FC<{ provider: Provider; theme: "light" | "dark" }> = 
         const saveId = await BusinessService.saveBusiness(user.uid, businessData);
         provider.saveId = saveId;
         setSaved(true);
+        console.log("saving",businessData)
       }
     } catch (error) {
       console.error('Error saving/unsaving business:', error);

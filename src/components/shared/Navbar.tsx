@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, Menu, X, Sun, Moon } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Search, Menu, X, Sun, Moon, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../theme/useTheme';
 
@@ -16,26 +16,75 @@ const Navbar: React.FC<NavbarProps> = ({
   const { theme, setTheme } = useTheme();
   const isDark = theme === 'dark';
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const desktopTermsRef = useRef<HTMLDivElement | null>(null);
+  const mobileTermsRef = useRef<HTMLDivElement | null>(null);
 
   const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
+    setIsMobileMenuOpen((prev) => {
+      if (prev) {
+        setIsTermsOpen(false);
+      }
+      return !prev;
+    });
   };
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
+  useEffect(() => {
+    if (!isTermsOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const targetNode = event.target as Node;
+      const clickedInsideDesktop =
+        desktopTermsRef.current &&
+        desktopTermsRef.current.contains(targetNode);
+      const clickedInsideMobile =
+        mobileTermsRef.current &&
+        mobileTermsRef.current.contains(targetNode);
+
+      if (!clickedInsideDesktop && !clickedInsideMobile) {
+        setIsTermsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isTermsOpen]);
+
+  const handleNavigate = (path: string) => {
+    navigate(path);
+    setIsMobileMenuOpen(false);
+    setIsTermsOpen(false);
+  };
+
   const navItems = [
     { name: 'Home', path: '/', key: 'home' },
     { name: 'How it Works', path: '/how-it-works', key: 'how-it-works' },
-    { name: 'Contact', path: '/contact', key: 'contact' }
+    { name: 'Contact', path: '/contact', key: 'contact' },
+    {
+      name: 'Terms',
+      key: 'terms',
+      children: [
+        { name: 'Privacy Policy', path: '/privacy-policy', key: 'privacy-policy' },
+        { name: 'Data Deletion', path: '/user-data-deletion', key: 'data-deletion' },
+        { name: 'Terms of Service', path: '/terms-of-service', key: 'terms-of-service' },
+      ],
+    }
   ];
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 p-3 sm:p-4">
       <div className="max-w-7xl mx-auto">
         <div className={`
-          backdrop-blur-xl rounded-2xl shadow-xl transition-all duration-300 relative overflow-hidden
+          backdrop-blur-xl rounded-2xl shadow-xl transition-all duration-300 relative overflow-visible
           ${isDark 
             ? 'bg-gradient-to-r from-gray-900/85 via-gray-800/90 to-gray-900/85 border border-gray-700/50 shadow-2xl shadow-black/20' 
             : 'bg-gradient-to-r from-white/90 via-gray-50/95 to-white/90 border border-gray-200/60 shadow-2xl shadow-gray-900/10'
@@ -98,36 +147,101 @@ const Navbar: React.FC<NavbarProps> = ({
                 : 'bg-white/30 border-gray-300/30 shadow-lg shadow-gray-500/10'
               }
             `}>
-              {navItems.map((item) => (
-                <button
-                  key={item.key}
-                  onClick={() => {
-                    navigate(item.path);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`
-                    px-4 py-2 rounded-xl font-medium transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group mx-1
-                    ${currentPage === item.key
-                      ? isDark
-                        ? 'bg-gradient-to-r from-blue-500/80 to-purple-600/80 text-white shadow-lg shadow-blue-500/25 scale-[1.02] z-10'
-                        : 'bg-gradient-to-r from-blue-500/80 to-indigo-600/80 text-white shadow-lg shadow-blue-500/25 scale-[1.02] z-10'
-                      : isDark
-                        ? 'text-gray-300 hover:text-white hover:bg-gradient-to-r hover:from-gray-700/60 hover:to-gray-600/60 hover:z-10'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-100/80 hover:to-gray-200/80 hover:z-10'
-                    }
-                  `}
-                >
-                  {/* Contained hover glow effect */}
-                  <div className={`
-                    absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl
-                    ${isDark 
-                      ? 'bg-gradient-to-r from-blue-500/5 to-purple-500/5 shadow-lg shadow-blue-500/10' 
-                      : 'bg-gradient-to-r from-blue-500/3 to-indigo-500/3 shadow-lg shadow-blue-500/5'
-                    }
-                  `} />
-                  <span className="relative z-10">{item.name}</span>
-                </button>
-              ))}
+              {navItems.map((item) => {
+                const isActive =
+                  currentPage === item.key ||
+                  item.children?.some((child) => child.key === currentPage);
+
+                if (item.children) {
+                  return (
+                    <div
+                      key={item.key}
+                      className="relative mx-1 z-10"
+                      ref={desktopTermsRef}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setIsTermsOpen((prev) => !prev)}
+                        className={`
+                          flex items-center gap-1 px-4 py-2 rounded-xl font-medium transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group
+                          ${isActive
+                            ? isDark
+                              ? 'bg-gradient-to-r from-blue-500/80 to-purple-600/80 text-white shadow-lg shadow-blue-500/25 scale-[1.02] z-10'
+                              : 'bg-gradient-to-r from-blue-500/80 to-indigo-600/80 text-white shadow-lg shadow-blue-500/25 scale-[1.02] z-10'
+                            : isDark
+                              ? 'text-gray-300 hover:text-white hover:bg-gradient-to-r hover:from-gray-700/60 hover:to-gray-600/60 hover:z-10'
+                              : 'text-gray-600 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-100/80 hover:to-gray-200/80 hover:z-10'
+                          }
+                        `}
+                      >
+                        <div className={`
+                          absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl
+                          ${isDark 
+                            ? 'bg-gradient-to-r from-blue-500/5 to-purple-500/5 shadow-lg shadow-blue-500/10' 
+                            : 'bg-gradient-to-r from-blue-500/3 to-indigo-500/3 shadow-lg shadow-blue-500/5'
+                          }
+                        `} />
+                        <span className="relative z-10">{item.name}</span>
+                        <ChevronDown
+                          size={16}
+                          className={`relative z-10 transition-transform duration-200 ${isTermsOpen ? 'rotate-180' : ''}`}
+                        />
+                      </button>
+
+                      {isTermsOpen && (
+                        <div className={`
+                          absolute right-0 mt-2 w-56 rounded-xl overflow-hidden border shadow-lg z-20
+                          ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
+                        `}>
+                          {item.children.map((child) => (
+                            <button
+                              key={child.key}
+                              onClick={() => handleNavigate(child.path)}
+                              className={`
+                                block w-full text-left px-4 py-2 text-sm transition-colors
+                                ${isDark
+                                  ? 'text-gray-200 hover:bg-gray-700/70'
+                                  : 'text-gray-600 hover:bg-gray-100'
+                                }
+                              `}
+                            >
+                              {child.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => item.path && handleNavigate(item.path)}
+                    className={`
+                      px-4 py-2 rounded-xl font-medium transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group mx-1
+                      ${isActive
+                        ? isDark
+                          ? 'bg-gradient-to-r from-blue-500/80 to-purple-600/80 text-white shadow-lg shadow-blue-500/25 scale-[1.02] z-10'
+                          : 'bg-gradient-to-r from-blue-500/80 to-indigo-600/80 text-white shadow-lg shadow-blue-500/25 scale-[1.02] z-10'
+                        : isDark
+                          ? 'text-gray-300 hover:text-white hover:bg-gradient-to-r hover:from-gray-700/60 hover:to-gray-600/60 hover:z-10'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-100/80 hover:to-gray-200/80 hover:z-10'
+                      }
+                    `}
+                  >
+                    {/* Contained hover glow effect */}
+                    <div className={`
+                      absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl
+                      ${isDark 
+                        ? 'bg-gradient-to-r from-blue-500/5 to-purple-500/5 shadow-lg shadow-blue-500/10' 
+                        : 'bg-gradient-to-r from-blue-500/3 to-indigo-500/3 shadow-lg shadow-blue-500/5'
+                      }
+                    `} />
+                    <span className="relative z-10">{item.name}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Desktop Right Actions */}
@@ -230,28 +344,82 @@ const Navbar: React.FC<NavbarProps> = ({
               lg:hidden border-t px-4 sm:px-6 py-4 space-y-2
               ${isDark ? 'border-gray-700/50' : 'border-gray-200/50'}
             `}>
-              {navItems.map((item) => (
-                <button
-                  key={item.key}
-                  onClick={() => {
-                    navigate(item.path);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`
-                    w-full text-left px-4 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105
-                    ${currentPage === item.key
-                      ? isDark
-                        ? 'bg-blue-500/20 text-blue-400 shadow-lg'
-                        : 'bg-blue-500/10 text-blue-600 shadow-lg'
-                      : isDark
-                        ? 'text-gray-300 hover:text-white hover:bg-gray-700/50'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/70'
-                    }
-                  `}
-                >
-                  {item.name}
-                </button>
-              ))}
+              {navItems.map((item) => {
+                const isActive =
+                  currentPage === item.key ||
+                  item.children?.some((child) => child.key === currentPage);
+
+                if (item.children) {
+                  return (
+                    <div
+                      key={item.key}
+                      className="space-y-2"
+                      ref={mobileTermsRef}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setIsTermsOpen((prev) => !prev)}
+                        className={`
+                          w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105
+                          ${isActive
+                            ? isDark
+                              ? 'bg-blue-500/20 text-blue-400 shadow-lg'
+                              : 'bg-blue-500/10 text-blue-600 shadow-lg'
+                            : isDark
+                              ? 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/70'
+                          }
+                        `}
+                      >
+                        <span>{item.name}</span>
+                        <ChevronDown
+                          size={18}
+                          className={`transition-transform duration-200 ${isTermsOpen ? 'rotate-180' : ''}`}
+                        />
+                      </button>
+                      {isTermsOpen && (
+                        <div className="pl-4 space-y-2">
+                          {item.children.map((child) => (
+                            <button
+                              key={child.key}
+                              onClick={() => handleNavigate(child.path)}
+                              className={`
+                                w-full text-left px-4 py-2 rounded-lg text-sm transition-all duration-200
+                                ${isDark
+                                  ? 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+                                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/70'
+                                }
+                              `}
+                            >
+                              {child.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => item.path && handleNavigate(item.path)}
+                    className={`
+                      w-full text-left px-4 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105
+                      ${isActive
+                        ? isDark
+                          ? 'bg-blue-500/20 text-blue-400 shadow-lg'
+                          : 'bg-blue-500/10 text-blue-600 shadow-lg'
+                        : isDark
+                          ? 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/70'
+                      }
+                    `}
+                  >
+                    {item.name}
+                  </button>
+                );
+              })}
               
               <div className={`
                 pt-4 mt-4 border-t space-y-2

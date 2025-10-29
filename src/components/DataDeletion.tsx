@@ -21,32 +21,79 @@ const DataDeletion: React.FC = () => {
 
       <div className="relative z-10 pt-24 sm:pt-28 md:pt-32 pb-12">
         {/* Hero Section */}
-        <div className="max-w-4xl mx-auto px-4 text-center mb-16">
+        <div className="max-w-5xl mx-auto px-4 mb-16">
           <div className="animate-section">
-            <h1 className={`text-4xl md:text-6xl font-bold mb-6 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-              User Data Deletion {' '}
+            <h1 className={`text-4xl text-center md:text-6xl font-bold mb-6 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+              Delete Your {" "}
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Instructions
+                Data
               </span>
             </h1>
 
-            <p className={`text-lg md:text-xl mb-8 max-w-2xl mx-auto leading-relaxed ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
-              HireLocal respects your privacy and provides you with the ability to request deletion of your data at any time. If you have used Facebook Login to sign in to our application and wish to delete your data, you can do so in one of the following ways:
+            <p className={`text-lg md:text-xl mb-8 max-w-5xl mx-auto leading-relaxed ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
+              Request permanent deletion of your account and personal data
             </p>
 
-            <p className={`text-lg md:text-xl mb-8 max-w-2xl mx-auto leading-relaxed ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
-              <b>1. Automatic Deletion:</b> When you remove the HireLocal app from your Facebook account settings, all information we have received through Facebook Login will be automatically deleted from our systems. 
+            <div className="">
+              <h4 className={`text-xl font-bold md:text-2xl max-w-5xl mx-auto leading-relaxed mb-3 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Important Notice</h4>
+              <p className={`text-lg md:text-xl mb-8 max-w-5xl mx-auto leading-relaxed ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
+             Deleting your data is permanent and cannot be undone. This action will:
+            </p>
+
+            <ul className="pl-5">
+              <li className={`text-lg md:text-xl mb-8 max-w-5xl mx-auto leading-relaxed list-disc ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Permanently delete your account and all associated data
+</li>
+              <li className={`text-lg md:text-xl mb-8 max-w-5xl mx-auto leading-relaxed list-disc ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Remove all conversation history and chat interactions
+</li>
+              <li className={`text-lg md:text-xl mb-8 max-w-5xl mx-auto leading-relaxed list-disc ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Delete any uploaded documents or tax information
+
+</li>
+              <li className={`text-lg md:text-xl mb-8 max-w-5xl mx-auto leading-relaxed list-disc ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Revoke access to all HireLocal services
+</li>
+            </ul>
+            </div>
+
+
+            <h4 className={`text-xl font-bold md:text-2xl max-w-5xl mx-auto leading-relaxed mb-3 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Data Deletion Request</h4>
+
+            <p className={`text-lg md:text-xl mb-8 max-w-5xl mx-auto leading-relaxed ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
+             We respect your right to control your personal data. If you wish to delete your account and all associated data from HireLocal, please fill out the form below. We will process your request in accordance with applicable privacy laws.
+
+            </p>
+
+            <h4 className={`text-xl font-bold md:text-2xl max-w-5xl mx-auto leading-relaxed mb-3 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>What Will Be Deleted</h4>
+           
+            <ul className="pl-5">
+              <li className={`text-lg md:text-xl mb-8 max-w-5xl mx-auto leading-relaxed list-disc ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Account information</li>
+              <li className={`text-lg md:text-xl mb-8 max-w-5xl mx-auto leading-relaxed list-disc ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Personal preferences
+
+</li>
+              <li className={`text-lg md:text-xl mb-8 max-w-5xl mx-auto leading-relaxed list-disc ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Conversation history
+
+</li>
+              <li className={`text-lg md:text-xl mb-8 max-w-5xl mx-auto leading-relaxed list-disc ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Usage analytics
+</li>
+              <li className={`text-lg md:text-xl mb-8 max-w-5xl mx-auto leading-relaxed list-disc ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Uploaded documents
+</li>
+              <li className={`text-lg md:text-xl mb-8 max-w-5xl mx-auto leading-relaxed list-disc ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Authentication tokens</li>
+            </ul>
+
+            <h4 className={`text-xl font-bold md:text-2xl max-w-5xl mx-auto leading-relaxed mb-3 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Need Help?</h4>
+
+
+            <p className={`text-lg md:text-xl mb-8 max-w-5xl mx-auto leading-relaxed ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>If you have questions about data deletion or need assistance, please contact our privacy team:
+
             </p>
 
             
-            <p className={`text-lg md:text-xl mb-8 max-w-2xl mx-auto leading-relaxed ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
-              <b>2. Manual Request:</b> You may also request deletion of your account and data by contacting us directly: info@hirelocal.com. 
-              Please include the email address associated with your Facebook account when submitting your request. We will process your request and delete your data within 7 business days.
+            <p className={`text-lg md:text-xl mb-2 max-w-5xl mx-auto leading-relaxed ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>  
+              Email: support@hirelocal.hotelaiengine.com
+            </p>
+            <p className={`text-lg md:text-xl mb-2 max-w-5xl mx-auto leading-relaxed ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>  
+              Website: https://hirelocal.hotelaiengine.com/
             </p>
 
-            <p className={`text-lg md:text-xl mb-8 max-w-2xl mx-auto leading-relaxed ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
-              <b>3. Scope of Deletion:</b> Your Facebook login information will be removed from our authentication system. Any personal data retrieved from Facebook (name, email, profile picture) will no longer be stored. Some anonymized, aggregated data (not personally identifiable) may remain for analytics purposes.
-            </p>
+           
           </div>
         </div>
       </div>  

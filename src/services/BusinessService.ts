@@ -64,7 +64,7 @@ export const BusinessService = {
         name: business.name || 'Unnamed Business',
         description: business.description || '',
         category: business.category || 'uncategorized',
-        services: business.services || [],
+        service: business.service || '',
         location: business.location || {},
         phone: business.phone || '', // FIXED: Ensure phone is preserved
         website: business.website || '',
@@ -163,7 +163,7 @@ export const BusinessService = {
           name: businessData.name || '',
           description: businessData.description || '',
           category: businessData.category || '',
-          services: businessData.services || [],
+          service: businessData.service || '',
           location: {
             address: businessData.location?.address || businessData.address || '',
             city: businessData.location?.city || businessData.city || '',

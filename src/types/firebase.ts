@@ -54,7 +54,7 @@ export interface Business {
   name: string;
   description: string;
   category: string;
-  services: string[];
+  service: string;
   location: BusinessLocation;
   saved: boolean;
   saveId?: string; // ID of the saved business entry

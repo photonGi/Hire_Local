@@ -14,10 +14,26 @@ import {
   Phone, 
   Tag, 
   Trash2, 
-  Share2, 
+  Copy,
   Loader2,
   BookmarkCheck // ADD THIS IMPORT
 } from 'lucide-react';
+
+type CategoryOption = {
+  label: string;
+  value: string;
+  matchValues?: string[];
+};
+
+const CATEGORY_OPTIONS: CategoryOption[] = [
+  { label: 'All', value: 'all' },
+  { label: 'Plumber', value: 'plumber', matchValues: ['plumber', 'plumbers', 'plumbing'] },
+  { label: 'Electrician', value: 'electrician', matchValues: ['electrician', 'electricians', 'electrical'] },
+  { label: 'Cleaner', value: 'cleaner', matchValues: ['cleaner', 'cleaners', 'cleaning'] },
+  { label: 'Handyman', value: 'handyman', matchValues: ['handyman', 'handymen', 'maintenance'] },
+  { label: 'Carpenter', value: 'carpenter', matchValues: ['carpenter', 'carpenters', 'carpentry'] },
+  { label: 'Painter', value: 'painter', matchValues: ['painter', 'painters', 'painting'] },
+];
 
 interface ButtonProps {
   onClick: () => void;
@@ -67,15 +83,30 @@ const SavedProvidersScreen = () => {
   const navigate = useNavigate();
   const { user } = useAuth(); // ADD THIS
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('All');
+  const [service, setService] = useState<string>(CATEGORY_OPTIONS[0].value);
   const [sort, setSort] = useState('recent');
   const [showFilters, setShowFilters] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [sharingId, setSharingId] = useState<string | null>(null);
+  const [copyingId, setCopyingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [providers, setProviders] = useState<Business[]>([]); // UPDATED STATE
+  const selectedCategoryOption = useMemo<CategoryOption>(() => {
+    const fallback = CATEGORY_OPTIONS[0];
+    return CATEGORY_OPTIONS.find((option) => option.value === service) ?? fallback;
+  }, [service]);
 
-  const categories = ['All','Plumber','Electrician','Cleaner','Handyman','Carpenter','Painter'];
+  const selectedCategoryLabel = selectedCategoryOption.label;
+  const isFilteringByCategory = selectedCategoryOption.value !== 'all';
+
+  const handleCategorySelect = (value: string) => {
+    setService((prev) => {
+      if (value === 'all') {
+        return 'all';
+      }
+
+      return prev === value ? 'all' : value;
+    });
+  };
 
   // LOAD REAL DATA FROM FIREBASE
   const loadSavedProviders = async () => {
@@ -88,6 +119,7 @@ const SavedProvidersScreen = () => {
       setLoading(true);
       const savedBusinesses = await BusinessService.getSavedBusinesses(user.uid);
       setProviders(savedBusinesses);
+      console.log("asdasdas",savedBusinesses)
     } catch (error) {
       console.error('Error loading saved providers:', error);
       // Show empty state on error
@@ -103,14 +135,59 @@ const SavedProvidersScreen = () => {
   }, [user]);
 
   // UPDATED FILTERING LOGIC FOR REAL DATA
+  const normalizeText = (value?: string | null) =>
+    value?.toString().trim().toLowerCase() ?? '';
+
   const filtered = useMemo(() => {
+    const searchTerm = normalizeText(search);
+    const matchTokens = (selectedCategoryOption.matchValues ?? [selectedCategoryOption.value])
+      .map(normalizeText)
+      .filter(Boolean);
+
     return providers
-      .filter(p => category === 'All' || p.category.toLowerCase() === category.toLowerCase())
-      .filter(p => !search || 
-        p.name.toLowerCase().includes(search.toLowerCase()) || 
-        p.category.toLowerCase().includes(search.toLowerCase()) ||
-        p.description.toLowerCase().includes(search.toLowerCase())
-      )
+      .filter((p) => {
+        if (selectedCategoryOption.value === 'all') {
+          return true;
+        }
+
+        const categoryValue = normalizeText(p.category);
+        const serviceValue = normalizeText((p as { service?: string }).service);
+        const servicesList = Array.isArray(p.services)
+          ? p.services.map((item) => normalizeText(item))
+          : [];
+
+        return matchTokens.some((token) => {
+          if (!token) {
+            return false;
+          }
+
+          if (categoryValue === token || categoryValue.startsWith(token)) {
+            return true;
+          }
+
+          if (serviceValue === token || serviceValue.includes(token)) {
+            return true;
+          }
+
+          return servicesList.some(
+            (item) => item === token || item.includes(token)
+          );
+        });
+      })
+      .filter((p) => {
+        if (!searchTerm) {
+          return true;
+        }
+
+        const nameMatch = normalizeText(p.name).includes(searchTerm);
+        const categoryMatch = normalizeText(p.category).includes(searchTerm);
+        const descriptionMatch = normalizeText(p.description).includes(searchTerm);
+        const servicesMatch = Array.isArray(p.services)
+          ? p.services.some((item) => normalizeText(item).includes(searchTerm))
+          : false;
+
+        return nameMatch || categoryMatch || descriptionMatch || servicesMatch;
+      })
       .sort((a, b) => {
         if (sort === 'recent') {
           const aDate = a.savedAt ? new Date(a.savedAt).getTime() : 0;
@@ -124,7 +201,7 @@ const SavedProvidersScreen = () => {
         }
         return a.name.localeCompare(b.name);
       });
-  }, [providers, category, search, sort]);
+  }, [providers, selectedCategoryOption, search, sort]);
 
   // UPDATED REMOVE PROVIDER FUNCTION
   const removeProvider = async (saveId: string) => {
@@ -135,6 +212,9 @@ const SavedProvidersScreen = () => {
       await BusinessService.unsaveBusiness(user.uid, saveId);
       // Remove from local state
       setProviders(prev => prev.filter(p => p.id !== saveId));
+      if (copyingId === saveId) {
+        setCopyingId(null);
+      }
     } catch (error) {
       console.error('Error removing provider:', error);
     } finally {
@@ -142,14 +222,36 @@ const SavedProvidersScreen = () => {
     }
   };
 
-  const shareProvider = (id: string) => {
-    setSharingId(id);
-    // Mock sharing functionality
-    const provider = providers.find(p => p.id === id);
-    if (provider) {
-      navigator.clipboard.writeText(`Check out ${provider.name}: ${provider.location.address}`);
+  const copyProviderDetails = async (id: string) => {
+    const provider = providers.find((p) => p.id === id);
+    if (!provider) {
+      return;
     }
-    setTimeout(() => setSharingId(null), 1200);
+
+    setCopyingId(id);
+
+    const details = [
+      provider.name,
+      provider.description,
+      provider.service,
+      provider.location?.address,
+      provider.phone ? `Phone: ${provider.phone}` : null,
+      provider.website ? `Website: ${provider.website}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    try {
+      if (!navigator?.clipboard?.writeText) {
+        throw new Error('Clipboard API not available');
+      }
+
+      await navigator.clipboard.writeText(details);
+    } catch (error) {
+      console.error('Failed to copy provider details:', error);
+    } finally {
+      setTimeout(() => setCopyingId(null), 1200);
+    }
   };
 
   const { theme } = useTheme();
@@ -296,23 +398,35 @@ const SavedProvidersScreen = () => {
               </div>
             </div>
             <div className="flex gap-1.5 overflow-x-auto pb-1 hide-scrollbar">
-              {categories.map(c => (
-                <Button
-                  key={c}
-                  size="sm"
-                  variant={category === c ? 'primary' : 'subtle'}
-                  onClick={() => setCategory(c)}
-                  className="text-[10px] font-medium px-4 rounded-full !h-8 transition-all duration-300 bg-slate-600/30 dark:bg-white/5 hover:bg-slate-500/40 dark:hover:bg-white/10 border-slate-400/30 dark:border-white/10 text-slate-200"
-                >
-                  {c}
-                </Button>
-              ))}
+              {CATEGORY_OPTIONS.map((option) => {
+                const isSelected = service === option.value;
+                const baseClasses =
+                  'text-[10px] font-medium px-4 rounded-full !h-8 transition-all duration-300';
+                const selectedClasses = isDark
+                  ? 'bg-blue-600/90 text-white border border-blue-400/80 shadow-blue-500/30'
+                  : 'bg-blue-600 text-white border border-blue-500 shadow-blue-500/30';
+                const unselectedClasses = isDark
+                  ? 'bg-white/5 hover:bg-white/10 text-slate-200 border-white/10'
+                  : 'bg-slate-600/30 hover:bg-slate-500/40 text-slate-200 border-slate-400/30';
+
+                return (
+                  <Button
+                    key={option.value}
+                    size="sm"
+                    variant={isSelected ? 'primary' : 'subtle'}
+                    onClick={() => handleCategorySelect(option.value)}
+                    className={`${baseClasses} ${isSelected ? selectedClasses : unselectedClasses}`}
+                  >
+                    {option.label}
+                  </Button>
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* Content */}
-        <div className={`flex-1 overflow-y-auto px-4 pb-32 space-y-5 ${showFilters ? 'pt-32 sm:pt-36' : 'pt-20 sm:pt-24'}`}>
+        <div className={`flex-1 overflow-y-auto px-4 pb-32 space-y-5 ${showFilters ? 'pt-[13rem] sm:pt-[13rem]' : 'pt-20 sm:pt-24'}`}>
           {loading && (
             <div className="flex items-center justify-center py-20">
               <div className="flex flex-col items-center gap-4">
@@ -330,11 +444,11 @@ const SavedProvidersScreen = () => {
                 <BookmarkCheck className={`w-8 h-8 transition-colors duration-300 ${themeClasses.emptyStateText}`} />
               </div>
               <h3 className={`mt-5 text-lg font-semibold tracking-wide transition-colors duration-300 ${themeClasses.primaryText}`}>
-                {search || category !== 'All' ? 'No matching providers' : 'Nothing Saved'}
+                {search || isFilteringByCategory ? 'No matching providers' : 'Nothing Saved'}
               </h3>
               <p className={`text-xs mt-2 max-w-xs mx-auto leading-relaxed transition-colors duration-300 ${themeClasses.secondaryText}`}>
-                {search || category !== 'All' 
-                  ? 'Try adjusting your search or filters to find saved providers.'
+                {search || isFilteringByCategory
+                  ? `Try adjusting your search${isFilteringByCategory ? ` or clearing the ${selectedCategoryLabel.toLowerCase()} filter` : ''} to find saved providers.`
                   : 'Start a search and save providers to build your personal shortlist for quick access later.'}
               </p>
               <Button size="md" onClick={() => navigate('/')} leftIcon={<Search className="w-4 h-4" />} className="mt-4">
@@ -346,7 +460,7 @@ const SavedProvidersScreen = () => {
           <div className="space-y-4">
             {filtered.map(p => {
               const removing = removingId === p.id;
-              const sharing = sharingId === p.id;
+              const copying = copyingId === p.id;
               
               // Light theme card overlay
               const lightCardOverlay = 'radial-gradient(circle at 20% 25%, rgba(71,85,105,.25) 0, transparent 60%), radial-gradient(circle at 80% 35%, rgba(100,116,139,.20) 0, transparent 65%), radial-gradient(circle at 55% 85%, rgba(148,163,184,.18) 0, transparent 65%)';
@@ -381,7 +495,7 @@ const SavedProvidersScreen = () => {
                           </p>
                           <div className={`mt-2 flex items-center gap-3 text-[11px] flex-wrap transition-colors duration-300 ${themeClasses.secondaryText}`}>
                             <span className={`px-2 py-0.5 rounded-full font-semibold text-[10px] tracking-wide transition-all duration-300 ${themeClasses.categoryBadge}`}>
-                              {p.category}
+                              {p.service}
                             </span>
                             <span className="flex items-center gap-1">
                               <MapPin className="w-3 h-3" /> {p.location.address || 'Location'}
@@ -410,8 +524,14 @@ const SavedProvidersScreen = () => {
                             Call
                           </Button>
                         )}
-                        <Button size="md" variant="subtle" onClick={() => shareProvider(p.id)} leftIcon={<Share2 className="w-4 h-4" />} loading={sharing}>
-                          {sharing ? 'Shared!' : 'Share'}
+                        <Button
+                          size="md"
+                          variant="subtle"
+                          onClick={() => copyProviderDetails(p.id)}
+                          leftIcon={<Copy className="w-4 h-4" />}
+                          loading={copying}
+                        >
+                          {copying ? 'Copied!' : 'Copy'}
                         </Button>
                         <Button size="md" variant="danger" onClick={() => removeProvider(p.id)} leftIcon={<Trash2 className="w-4 h-4" />} loading={removing}>
                           {removing ? 'Removing' : 'Remove'}

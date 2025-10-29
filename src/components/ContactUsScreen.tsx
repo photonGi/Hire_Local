@@ -103,7 +103,8 @@ const ContactUsScreen: React.FC = () => {
     {
       icon: <Mail className="w-5 h-5" />,
       title: 'Email',
-      value: 'hello@hirelocal.com',
+      value: 'privacy@hirelocal.hotelaiengine.com',
+      value2: 'support@hirelocal.hotelaiengine.com',
       subtitle: 'Send us an email anytime',
       color: 'blue'
     },
@@ -264,6 +265,17 @@ const ContactUsScreen: React.FC = () => {
                 }`}>
                   {info.value}
                 </p>
+                <p className={`font-semibold mb-1 ${
+                  info.color === 'blue' 
+                    ? 'text-blue-500'
+                    : info.color === 'emerald'
+                    ? 'text-emerald-500'
+                    : 'text-purple-500'
+                }`}>
+                  {info.value2}
+                </p>
+
+                
                 <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
                   {info.subtitle}
                 </p>

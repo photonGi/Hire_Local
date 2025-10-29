@@ -415,7 +415,7 @@ const UserProfileScreen: React.FC = () => {
                   <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.25em] font-medium text-blue-300/70">User Settings</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 pr-12">
                 <button onClick={() => setEditing(e=>{ if(!e) pushToast('Edit Mode Enabled','info','Update Profile'); else if(isDirty) pushToast('Unsaved Changes','info','Remember to save'); return !e;})} className="px-2.5 sm:px-3 h-9 sm:h-10 rounded-xl text-xs sm:text-sm font-semibold relative group overflow-hidden transition-all">
                   <span className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 group-hover:from-blue-500 group-hover:to-pink-500 transition" />
                   <span className="relative flex items-center gap-1.5 sm:gap-2 text-white">
@@ -439,7 +439,7 @@ const UserProfileScreen: React.FC = () => {
                   <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.25em] font-medium text-slate-200/90">User Settings</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 pr-12">
                 <button onClick={() => setEditing(e=>{ if(!e) pushToast('Edit Mode Enabled','info','Changes are local only'); else if(isDirty) pushToast('Unsaved Changes','info','Remember to save'); return !e;})} className="px-2.5 sm:px-3 h-9 sm:h-10 rounded-xl text-xs sm:text-sm font-semibold silver-button hover:scale-105 transition-all">
                   <span className="flex items-center gap-1.5 sm:gap-2 text-slate-700">
                     <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> 
