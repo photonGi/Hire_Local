@@ -61,11 +61,14 @@ export class LocationService {
                         address.locality ||
                         '';
                         
-            const city = address.city || 
-                        address.town || 
-                        address.municipality || 
-                        address.county ||
-                        '';
+            const city = address.district || 
+             address.city_district || 
+             address.town || 
+             address.village || 
+             address.municipality || 
+             address.county || 
+             address.state_district ||
+             '';
                         
             const state = address.state || 
                          address.province || 
