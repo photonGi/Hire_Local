@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Camera, Shield, Bell, MapPin, User, Lock, LogOut, Edit3, Mail, Phone, CheckCircle2, ChevronDown, ChevronUp, Link2, Loader2, AlertTriangle, X, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Camera, Shield, Bell, MapPin, User, Lock, LogOut, Edit3, Mail, Phone, CheckCircle2, ChevronDown, ChevronUp, Link2, Loader2, AlertTriangle, X, CheckCircle, Moon, Sun } from 'lucide-react';
 import { useTheme } from '../theme/useTheme';
 import { useAuth } from '../contexts/AuthContextHooks';
 import { locationService } from '../services/LocationService';
@@ -70,13 +70,17 @@ const UserProfileScreen: React.FC = () => {
   const ThemeToggle = () => (
     <button
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-lg font-medium transition-all ${
+      className={`fixed top-[19px] right-2 z-50 px-4 py-[10px] rounded-lg font-medium transition-all ml-2 ${
         theme === 'dark' 
-          ? 'bg-white/10 text-white hover:bg-white/20 border border-white/20' 
-          : 'bg-slate-800/10 text-slate-800 hover:bg-slate-800/20 border border-slate-300'
+          ? 'bg-white/10 text-white hover:bg-white/20 border border-white/20 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600' 
+          : 'bg-slate-800/10 text-slate-800 hover:bg-slate-800/20 border border-slate-300 silver-button'
       }`}
     >
-       
+       {theme === 'dark' ? (
+          <Sun className="w-4 h-4" />
+        ) : (
+          <Moon className="w-4 h-4" />
+        )}
     </button>
   );
   // Theme Toggle Button (for demo)
