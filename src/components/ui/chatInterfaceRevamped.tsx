@@ -445,7 +445,7 @@ const ProviderCard: React.FC<{ provider: Provider; theme: "light" | "dark" }> = 
     card: theme === "dark"
       ? "flex flex-col h-full bg-slate-800/40 backdrop-blur-sm border border-slate-700/60 rounded-3xl p-5 shadow-lg shadow-black/20"
       : "flex flex-col h-full bg-white/90 backdrop-blur-sm border border-slate-300/40 rounded-3xl p-5 shadow-lg shadow-gray-400/20",
-    name: theme === "dark" ? "font-bold text-white text-lg" : "font-bold text-slate-800 text-lg",
+    name: theme === "dark" ? "font-bold text-white text-lg break-all whitespace-normal" : "font-bold text-slate-800 text-lg break-all whitespace-normal",
     details: theme === "dark" ? "text-sm text-slate-400 mt-2" : "text-sm text-slate-600 mt-2",
     showMore: theme === "dark" ? "mt-2 text-teal-400 hover:text-teal-300 font-semibold text-xs transition-colors" : "mt-2 text-blue-500 hover:text-blue-400 font-semibold text-xs transition-colors",
     contact: theme === "dark" ? "flex items-center gap-3 text-slate-300 text-sm" : "flex items-center gap-3 text-slate-600 text-sm",
