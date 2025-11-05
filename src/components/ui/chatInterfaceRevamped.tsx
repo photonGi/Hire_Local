@@ -979,12 +979,16 @@ export default function App(): JSX.Element {
     };
     const serviceType = detectServiceType(text); 
 
+    const locationDetails = locationService.getCachedLocation();
+    const locationForApi = locationDetails
+      ? locationService.formatLocationForAPI(locationDetails)
+      : null;
 
     try {
       // Format the query to include actual location for "near me" queries
       const formattedQuery = formatLocationForAPI(text);
       const locationCity = locationService.getCachedLocation();
-      const payload = { query: formattedQuery, location: locationCity?.city || null};
+      const payload = { query: formattedQuery, location: locationForApi || null};
       console.debug("[chat] Sending payload to server:", payload);
       console.log("payload:",payload);
       const resp = await fetch("https://backend.hirelocal.hotelaiengine.com/api/query", {
@@ -995,7 +999,7 @@ export default function App(): JSX.Element {
       await addDoc(collection(db, "queries"), {
         query: text,
         formattedQuery,
-        location: locationCity?.city || null,
+        location: locationForApi || null,
         serviceType: serviceType || null,
         createdAt: serverTimestamp(),
       });
